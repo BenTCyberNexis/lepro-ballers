@@ -1,0 +1,25 @@
+body { margin: 0; font-family: Arial, sans-serif; background: #0f1d14; color: #fff; }
+.card { max-width: 360px; margin: 60px auto; padding: 24px; background: #17301f; border-radius: 12px; }
+h1 { margin: 0 0 4px; font-size: 24px; }
+.muted { color: #9bb7a3; margin-top: 0; }
+form { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
+input { padding: 12px; border-radius: 8px; border: 1px solid #2f5a3d; background: #0f1d14; color: #fff; font-size: 16px; }
+button { padding: 12px; border: 0; border-radius: 8px; background: #2ecc71; color: #062b12; font-weight: bold; font-size: 16px; cursor: pointer; }
+.error { color: #ff7a7a; margin: 0; }
+.link { color: #2ecc71; }
+.section { margin: 16px 0; }
+h2 { font-size: 16px; margin: 16px 0 8px; }
+.row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #2f5a3d; }
+button.small { padding: 6px 12px; font-size: 14px; }
+select { padding: 8px; border-radius: 8px; border: 1px solid #2f5a3d; background: #0f1d14; color: #fff; font-size: 14px; }
+label { font-size: 13px; margin-top: 4px; }
+input[type=checkbox] { width: 22px; height: 22px; padding: 0; }
+.pick { cursor: pointer; }
+.big { font-size: 36px; font-weight: bold; color: #2ecc71; }
+.me { color: #2ecc71; }
+.cat { margin: 10px 0; }
+.pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.pill { padding: 8px 10px; font-size: 13px; font-weight: normal; background: transparent; color: #fff; border: 1px solid #2f5a3d; }
+.pill.on { background: #2ecc71; color: #062b12; border-color: #2ecc71; }
+.legend { font-size: 13px; color: #9bb7a3; margin: 8px 0; }
+.legend p { margin: 4px 0; }
