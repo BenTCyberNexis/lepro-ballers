@@ -7,6 +7,7 @@ export default function AdminPlayers() {
   const [meId, setMeId] = useState(null)
   const [error, setError] = useState('')
   const [info, setInfo] = useState('')
+  const [openMenu, setOpenMenu] = useState(null)
 
   async function load() {
     const { data, error } = await supabase
@@ -131,16 +132,31 @@ export default function AdminPlayers() {
               {player ? player.name : 'Unknown user'}{' '}
               <span className="muted">@{r.username}</span>
             </span>
-            <span className="actions">
-              {player && (
-                <button className="small" onClick={() => resetFromRequest(r, player)}>
-                  Reset
-                </button>
-              )}
-              <button className="small" onClick={() => dismissRequest(r)}>
-                Dismiss
+            <div className="player-menu-wrap">
+              <button
+                type="button"
+                className="player-menu-trigger"
+                aria-label="Password request actions"
+                aria-expanded={openMenu === `request-${r.id}`}
+                onClick={() => setOpenMenu(openMenu === `request-${r.id}` ? null : `request-${r.id}`)}
+              >
+                ⋮
               </button>
-            </span>
+              {openMenu === `request-${r.id}` && (
+                <div className="player-menu">
+                  {player && (
+                    <button type="button" onClick={() => {
+                      setOpenMenu(null)
+                      resetFromRequest(r, player)
+                    }}>Reset password</button>
+                  )}
+                  <button type="button" onClick={() => {
+                    setOpenMenu(null)
+                    dismissRequest(r)
+                  }}>Dismiss request</button>
+                </div>
+              )}
+            </div>
           </div>
         )
       })}
@@ -152,14 +168,29 @@ export default function AdminPlayers() {
           <span>
             {p.name} <span className="muted">@{p.username}</span>
           </span>
-          <span className="actions">
-            <button className="small" onClick={() => approve(p.id)}>
-              Approve
+          <div className="player-menu-wrap">
+            <button
+              type="button"
+              className="player-menu-trigger"
+              aria-label={`Actions for ${p.name}`}
+              aria-expanded={openMenu === `pending-${p.id}`}
+              onClick={() => setOpenMenu(openMenu === `pending-${p.id}` ? null : `pending-${p.id}`)}
+            >
+              ⋮
             </button>
-            <button className="small" onClick={() => deletePlayer(p)}>
-              Reject
-            </button>
-          </span>
+            {openMenu === `pending-${p.id}` && (
+              <div className="player-menu">
+                <button type="button" onClick={() => {
+                  setOpenMenu(null)
+                  approve(p.id)
+                }}>Approve player</button>
+                <button type="button" onClick={() => {
+                  setOpenMenu(null)
+                  deletePlayer(p)
+                }}>Reject player</button>
+              </div>
+            )}
+          </div>
         </div>
       ))}
 
@@ -169,24 +200,39 @@ export default function AdminPlayers() {
           <span>
             {p.name} <span className="muted">@{p.username} · {p.role}</span>
           </span>
-          <span className="actions">
-            <button className="small" onClick={() => resetPassword(p)}>
-              Reset password
+          <div className="player-menu-wrap">
+            <button
+              type="button"
+              className="player-menu-trigger"
+              aria-label={`Actions for ${p.name}`}
+              aria-expanded={openMenu === `player-${p.id}`}
+              onClick={() => setOpenMenu(openMenu === `player-${p.id}` ? null : `player-${p.id}`)}
+            >
+              ⋮
             </button>
-            {p.id !== meId && (
-              <button
-                className="small"
-                onClick={() => setRole(p, p.role === 'admin' ? 'player' : 'admin')}
-              >
-                {p.role === 'admin' ? 'Remove admin' : 'Make admin'}
-              </button>
+            {openMenu === `player-${p.id}` && (
+              <div className="player-menu">
+                <button type="button" onClick={() => {
+                  setOpenMenu(null)
+                  resetPassword(p)
+                }}>Reset password</button>
+                {p.id !== meId && (
+                  <button type="button" onClick={() => {
+                    setOpenMenu(null)
+                    setRole(p, p.role === 'admin' ? 'player' : 'admin')
+                  }}>
+                    {p.role === 'admin' ? 'Remove admin' : 'Make admin'}
+                  </button>
+                )}
+                {p.id !== meId && p.role !== 'admin' && (
+                  <button type="button" onClick={() => {
+                    setOpenMenu(null)
+                    deletePlayer(p)
+                  }}>Delete player</button>
+                )}
+              </div>
             )}
-            {p.id !== meId && p.role !== 'admin' && (
-              <button className="small" onClick={() => deletePlayer(p)}>
-                Delete
-              </button>
-            )}
-          </span>
+          </div>
         </div>
       ))}
     </div>

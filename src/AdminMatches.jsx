@@ -1,9 +1,17 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabaseClient'
+import MatchDetails from './MatchDetails'
 
 const pad = (n) => String(n).padStart(2, '0')
 const toLocalInput = (d) =>
   `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+
+const emptyGoal = (team) => ({
+  id: null,
+  team,
+  scorer_id: '',
+  assist_id: '',
+})
 
 export default function AdminMatches() {
   const [players, setPlayers] = useState([])
@@ -18,6 +26,15 @@ export default function AdminMatches() {
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
 
+  const [selectedMatchId, setSelectedMatchId] = useState('')
+  const [resultSquad, setResultSquad] = useState([])
+  const [scoreA, setScoreA] = useState('0')
+  const [scoreB, setScoreB] = useState('0')
+  const [goalEntries, setGoalEntries] = useState([])
+  const [resultLoading, setResultLoading] = useState(false)
+  const [resultSaving, setResultSaving] = useState(false)
+  const [detailsMatchId, setDetailsMatchId] = useState(null)
+
   async function load() {
     const { data: p } = await supabase
       .from('players')
@@ -25,6 +42,7 @@ export default function AdminMatches() {
       .eq('status', 'approved')
       .order('name')
     setPlayers(p || [])
+
     const { data: m } = await supabase
       .from('matches')
       .select('id, match_date, venue, status, rating_closes_at')
@@ -39,9 +57,98 @@ export default function AdminMatches() {
   const toggle = (list, setList, id) =>
     setList(list.includes(id) ? list.filter((x) => x !== id) : [...list, id])
 
+  function resizeGoals(team, value) {
+    const count = Math.max(0, Math.min(99, Number(value) || 0))
+
+    if (team === 'A') setScoreA(String(count))
+    else setScoreB(String(count))
+
+    setGoalEntries((previous) => {
+      const currentTeamGoals = previous.filter((g) => g.team === team)
+      const otherTeamGoals = previous.filter((g) => g.team !== team)
+
+      const resized = Array.from({ length: count }, (_, index) =>
+        currentTeamGoals[index] || emptyGoal(team)
+      )
+
+      return team === 'A'
+        ? [...resized, ...otherTeamGoals]
+        : [...otherTeamGoals, ...resized]
+    })
+  }
+
+  function updateGoal(index, field, value) {
+    setGoalEntries((previous) =>
+      previous.map((goal, i) =>
+        i === index ? { ...goal, [field]: value } : goal
+      )
+    )
+  }
+
+  async function openResults(id) {
+    setSelectedMatchId(String(id))
+    setError('')
+    setResultLoading(true)
+    setGoalEntries([])
+    setResultSquad([])
+
+    const { data: mp, error: squadError } = await supabase
+      .from('match_players')
+      .select('player_id, team, players(name)')
+      .eq('match_id', id)
+
+    if (squadError) {
+      setError(squadError.message)
+      setResultLoading(false)
+      return
+    }
+
+    const squad = (mp || [])
+      .map((r) => ({
+        id: r.player_id,
+        team: r.team,
+        name: r.players?.name ?? 'Player',
+      }))
+      .sort((a, b) => a.team.localeCompare(b.team) || a.name.localeCompare(b.name))
+
+    setResultSquad(squad)
+
+    const { data: g, error: goalError } = await supabase
+      .from('goals')
+      .select('id, scorer_id, assist_id')
+      .eq('match_id', id)
+      .order('created_at')
+
+    if (goalError) {
+      setError(goalError.message)
+      setResultLoading(false)
+      return
+    }
+
+    const teamByPlayer = Object.fromEntries(
+      squad.map((player) => [player.id, player.team])
+    )
+
+    const existingGoals = (g || []).map((goal) => ({
+      id: goal.id,
+      team: teamByPlayer[goal.scorer_id] || 'A',
+      scorer_id: goal.scorer_id,
+      assist_id: goal.assist_id || '',
+    }))
+
+    const aGoals = existingGoals.filter((goal) => goal.team === 'A')
+    const bGoals = existingGoals.filter((goal) => goal.team === 'B')
+
+    setScoreA(String(aGoals.length))
+    setScoreB(String(bGoals.length))
+    setGoalEntries([...aGoals, ...bGoals])
+    setResultLoading(false)
+  }
+
   async function createMatch(e) {
     e.preventDefault()
     setError('')
+
     if (teamA.length === 0 || teamB.length === 0) {
       setError('Pick at least one player for each team')
       return
@@ -49,6 +156,13 @@ export default function AdminMatches() {
 
     setSaving(true)
     const { data: u } = await supabase.auth.getUser()
+
+    if (!u.user) {
+      setError('You must be logged in to create a match')
+      setSaving(false)
+      return
+    }
+
     const { data: match, error: e1 } = await supabase
       .from('matches')
       .insert({
@@ -59,6 +173,7 @@ export default function AdminMatches() {
       })
       .select()
       .single()
+
     if (e1) {
       setError(e1.message)
       setSaving(false)
@@ -69,7 +184,9 @@ export default function AdminMatches() {
       ...teamA.map((player_id) => ({ match_id: match.id, player_id, team: 'A' })),
       ...teamB.map((player_id) => ({ match_id: match.id, player_id, team: 'B' })),
     ]
+
     const { error: e2 } = await supabase.from('match_players').insert(rows)
+
     if (e2) {
       await supabase.from('matches').delete().eq('id', match.id)
       setError(e2.message)
@@ -81,7 +198,112 @@ export default function AdminMatches() {
     setTeamB([])
     setVenue('')
     setSaving(false)
-    load()
+
+    await load()
+    await openResults(match.id)
+  }
+
+  async function saveResult() {
+    setError('')
+
+    const incomplete = goalEntries.findIndex((goal) => !goal.scorer_id)
+    if (incomplete !== -1) {
+      setError(`Please select the scorer for ${goalEntries[incomplete].team === 'A' ? 'Team A' : 'Team B'} goal ${goalEntries.filter((g, i) => g.team === goalEntries[incomplete].team && i <= incomplete).length}.`)
+      return
+    }
+
+    for (const goal of goalEntries) {
+      const scorer = resultSquad.find((p) => p.id === goal.scorer_id)
+      const assister = resultSquad.find((p) => p.id === goal.assist_id)
+
+      if (!scorer || scorer.team !== goal.team) {
+        setError('Each goal scorer must belong to the team that scored.')
+        return
+      }
+
+      if (goal.assist_id && (!assister || assister.team !== goal.team)) {
+        setError('The assister must belong to the same team as the scorer.')
+        return
+      }
+
+      if (goal.assist_id && goal.assist_id === goal.scorer_id) {
+        setError('The scorer and assister must be different players.')
+        return
+      }
+    }
+
+    setResultSaving(true)
+
+    const savedIds = []
+
+    for (const goal of goalEntries) {
+      const values = {
+        match_id: Number(selectedMatchId),
+        scorer_id: goal.scorer_id,
+        assist_id: goal.assist_id || null,
+      }
+
+      if (goal.id) {
+        const { error } = await supabase
+          .from('goals')
+          .update(values)
+          .eq('id', goal.id)
+
+        if (error) {
+          setError(error.message)
+          setResultSaving(false)
+          return
+        }
+
+        savedIds.push(goal.id)
+      } else {
+        const { data, error } = await supabase
+          .from('goals')
+          .insert(values)
+          .select('id')
+          .single()
+
+        if (error) {
+          setError(error.message)
+          setResultSaving(false)
+          return
+        }
+
+        savedIds.push(data.id)
+      }
+    }
+
+    const { data: oldGoals, error: oldGoalsError } = await supabase
+      .from('goals')
+      .select('id')
+      .eq('match_id', Number(selectedMatchId))
+
+    if (oldGoalsError) {
+      setError(oldGoalsError.message)
+      setResultSaving(false)
+      return
+    }
+
+    const removedIds = (oldGoals || [])
+      .map((goal) => goal.id)
+      .filter((id) => !savedIds.includes(id))
+
+    if (removedIds.length > 0) {
+      const { error: deleteError } = await supabase
+        .from('goals')
+        .delete()
+        .in('id', removedIds)
+
+      if (deleteError) {
+        setError(deleteError.message)
+        setResultSaving(false)
+        return
+      }
+    }
+
+    setResultSaving(false)
+    await openResults(selectedMatchId)
+    setError('Result saved successfully.')
   }
 
   async function closeMatch(id) {
@@ -90,21 +312,36 @@ export default function AdminMatches() {
       .from('matches')
       .update({ status: 'closed' })
       .eq('id', id)
+
     if (error) setError(error.message)
     else load()
   }
 
+  const byId = Object.fromEntries(resultSquad.map((p) => [p.id, p]))
+
+  const selectedMatch = matches.find(
+    (m) => String(m.id) === String(selectedMatchId)
+  )
+
   return (
     <div className="section">
       <h2>Create match</h2>
+
       <form onSubmit={createMatch}>
         <label className="muted">Match date</label>
-        <input type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
+        <input
+          type="date"
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+          required
+        />
+
         <input
           placeholder="Venue"
           value={venue}
           onChange={(e) => setVenue(e.target.value)}
         />
+
         <label className="muted">Ratings close at</label>
         <input
           type="datetime-local"
@@ -141,12 +378,156 @@ export default function AdminMatches() {
             </label>
           ))}
 
-        {error && <p className="error">{error}</p>}
-        <button disabled={saving}>{saving ? 'Saving...' : 'Create match'}</button>
+        {error && !selectedMatchId && <p className="error">{error}</p>}
+
+        <button disabled={saving}>
+          {saving ? 'Creating...' : 'Create match'}
+        </button>
       </form>
 
+      {selectedMatchId && (
+        <div className="section">
+          <h2>
+            Enter match result
+            {selectedMatch && ` · ${selectedMatch.match_date}`}
+          </h2>
+
+          {selectedMatch?.venue && (
+            <p className="muted">{selectedMatch.venue}</p>
+          )}
+
+          {resultLoading ? (
+            <p className="muted">Loading match players and goals...</p>
+          ) : (
+            <>
+              <h3>What was the final score?</h3>
+
+              <div className="row">
+                <label>
+                  <strong>Team A</strong>
+                  <input
+                    type="number"
+                    min="0"
+                    max="99"
+                    value={scoreA}
+                    onChange={(e) => resizeGoals('A', e.target.value)}
+                  />
+                </label>
+
+                <label>
+                  <strong>Team B</strong>
+                  <input
+                    type="number"
+                    min="0"
+                    max="99"
+                    value={scoreB}
+                    onChange={(e) => resizeGoals('B', e.target.value)}
+                  />
+                </label>
+              </div>
+
+              <h3>Goal details</h3>
+              <p className="muted">
+                Select the scorer for every goal. Assists are optional.
+              </p>
+
+              {goalEntries.length === 0 && (
+                <p className="muted">No goals entered. Set the score above.</p>
+              )}
+
+              {goalEntries.map((goal, index) => {
+                const teamPlayers = resultSquad.filter(
+                  (p) => p.team === goal.team
+                )
+
+                const teamGoalNumber =
+                  goalEntries
+                    .slice(0, index + 1)
+                    .filter((g) => g.team === goal.team).length
+
+                return (
+                  <div className="section" key={`${goal.team}-${teamGoalNumber}`}>
+                    <h3>
+                      Team {goal.team} · Goal {teamGoalNumber}
+                    </h3>
+
+                    <label className="muted">Who scored?</label>
+                    <select
+                      value={goal.scorer_id}
+                      onChange={(e) =>
+                        updateGoal(index, 'scorer_id', e.target.value)
+                      }
+                    >
+                      <option value="">Choose goal scorer</option>
+                      {teamPlayers.map((p) => (
+                        <option key={p.id} value={p.id}>{p.name}</option>
+                      ))}
+                    </select>
+
+                    <label className="muted">Who assisted? (Optional)</label>
+                    <select
+                      value={goal.assist_id}
+                      onChange={(e) =>
+                        updateGoal(index, 'assist_id', e.target.value)
+                      }
+                    >
+                      <option value="">No assist</option>
+                      {teamPlayers
+                        .filter((p) => p.id !== goal.scorer_id)
+                        .map((p) => (
+                          <option key={p.id} value={p.id}>{p.name}</option>
+                        ))}
+                    </select>
+                  </div>
+                )
+              })}
+
+              <h3>Result preview</h3>
+              <p>
+                <strong>Team A {scoreA || 0} – {scoreB || 0} Team B</strong>
+              </p>
+
+              {goalEntries.length > 0 && (
+                <div>
+                  {goalEntries.map((goal, index) => (
+                    <p key={`${goal.team}-preview-${index}`}>
+                      ⚽ Team {goal.team}: {byId[goal.scorer_id]?.name || 'Scorer not selected'}
+                      {goal.assist_id
+                        ? ` · Assist: ${byId[goal.assist_id]?.name || 'Unknown'}`
+                        : ' · No assist'}
+                    </p>
+                  ))}
+                </div>
+              )}
+
+              {error && <p className={error === 'Result saved successfully.' ? 'success' : 'error'}>{error}</p>}
+
+              <button
+                type="button"
+                onClick={saveResult}
+                disabled={resultSaving}
+              >
+                {resultSaving ? 'Saving result...' : 'Confirm and save result'}
+              </button>
+
+              <button
+                type="button"
+                className="small"
+                onClick={() => setSelectedMatchId('')}
+              >
+                Done
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
       <h2>Matches ({matches.length})</h2>
-      {matches.length === 0 && <p className="muted">No matches yet.</p>}
+
+      {matches.length === 0 && (
+        <p className="muted">No matches yet.</p>
+      )}
+
       {matches.map((m) => (
         <div className="row" key={m.id}>
           <span>
@@ -158,13 +539,48 @@ export default function AdminMatches() {
                 : 'Closed'}
             </span>
           </span>
-          {m.status === 'open' && (
-            <button className="small" onClick={() => closeMatch(m.id)}>
-              Close now
+
+          <span className="actions">
+            <button
+              type="button"
+              className="small"
+              onClick={() => setDetailsMatchId(m.id)}
+            >
+              View details
             </button>
-          )}
+
+            <button
+              type="button"
+              className="small"
+              onClick={() => openResults(m.id)}
+            >
+              Enter / edit result
+            </button>
+
+            {m.status === 'open' && (
+              <button
+                type="button"
+                className="small"
+                onClick={() => closeMatch(m.id)}
+              >
+                Close now
+              </button>
+            )}
+          </span>
         </div>
       ))}
+
+      {detailsMatchId !== null && (
+        <MatchDetails
+          matchId={detailsMatchId}
+          isAdmin
+          onClose={() => setDetailsMatchId(null)}
+          onEdit={(id) => {
+            setDetailsMatchId(null)
+            openResults(id)
+          }}
+        />
+      )}
     </div>
   )
 }

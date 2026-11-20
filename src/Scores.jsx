@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabaseClient'
+import MatchDetails from './MatchDetails'
 
 const CATS = [
   ['passing', 'Passing'],
@@ -17,6 +18,7 @@ export default function Scores({ userId, show }) {
   const [stats, setStats] = useState([])
   const [history, setHistory] = useState([])
   const [error, setError] = useState('')
+  const [selectedMatchId, setSelectedMatchId] = useState(null)
 
   useEffect(() => {
     async function load() {
@@ -192,9 +194,23 @@ export default function Scores({ userId, show }) {
                 ))}
               </div>
               <p className="muted small-text">Rated by {r.ratings_count} players</p>
+              <button
+                type="button"
+                className="small"
+                onClick={() => setSelectedMatchId(r.match_id)}
+              >
+                View match details →
+              </button>
             </div>
           ))}
         </>
+      )}
+
+      {selectedMatchId && (
+        <MatchDetails
+          matchId={selectedMatchId}
+          onClose={() => setSelectedMatchId(null)}
+        />
       )}
     </div>
   )

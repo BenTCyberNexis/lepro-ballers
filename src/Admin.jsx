@@ -1,16 +1,15 @@
 import { useState } from 'react'
 import AdminPlayers from './AdminPlayers'
 import AdminMatches from './AdminMatches'
-import AdminResults from './AdminResults'
 
 const PARTS = [
   ['players', 'Players'],
-  ['matches', 'New match'],
-  ['results', 'Results'],
+  ['matches', 'Matches'],
 ]
 
 export default function Admin() {
   const [part, setPart] = useState('players')
+
   return (
     <div>
       <div className="pills">
@@ -27,7 +26,6 @@ export default function Admin() {
       </div>
       {part === 'players' && <AdminPlayers />}
       {part === 'matches' && <AdminMatches />}
-      {part === 'results' && <AdminResults />}
     </div>
   )
 }
