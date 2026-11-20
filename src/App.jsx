@@ -27,6 +27,7 @@ export default function App() {
   const [changing, setChanging] = useState(false)
   const [tab, setTab] = useState('home')
   const [route, setRoute] = useState(window.location.hash)
+  const [accountOpen, setAccountOpen] = useState(false)
 
   useEffect(() => {
     const onHash = () => setRoute(window.location.hash)
@@ -120,7 +121,28 @@ export default function App() {
     <div className="app">
       <header className="topbar">
         <span className="brand">⚽ Lepro Ballers</span>
-        <span className="who">{player.name}</span>
+        <div className="account-wrap">
+          <button
+            type="button"
+            className="who account-trigger"
+            onClick={() => setAccountOpen(!accountOpen)}
+          >
+            {player.name} <span>▾</span>
+          </button>
+          {accountOpen && (
+            <div className="account-menu">
+              <button type="button" onClick={() => {
+                setAccountOpen(false)
+                setChanging(true)
+              }}>
+                🔒 Change password
+              </button>
+              <button type="button" onClick={() => supabase.auth.signOut()}>
+                ↪ Log out
+              </button>
+            </div>
+          )}
+        </div>
       </header>
 
       <main className="card">
@@ -137,17 +159,6 @@ export default function App() {
           <>
             <Scores userId={userId} show="detail" />
             <Season userId={userId} />
-            <div className="section">
-              <h2>Account</h2>
-              <div className="actions left">
-                <button className="small" onClick={() => setChanging(true)}>
-                  Change password
-                </button>
-                <button className="small" onClick={() => supabase.auth.signOut()}>
-                  Log out
-                </button>
-              </div>
-            </div>
           </>
         )}
         {active === 'admin' && isAdmin && <Admin />}
