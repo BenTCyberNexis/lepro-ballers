@@ -44,6 +44,9 @@ export default function Login() {
       <p className="muted">
         New player? <a className="link" href="#/signup">Sign up</a>
       </p>
+      <p className="muted">
+        <a className="link" href="#/forgot">Forgot password?</a>
+      </p>
     </div>
   )
 }
