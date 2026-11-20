@@ -3,19 +3,29 @@ import { supabase } from './supabaseClient'
 import Login from './Login'
 import Signup from './Signup'
 import ForgotPassword from './ForgotPassword'
-import Rate from './Rate'
 import ChangePassword from './ChangePassword'
+import LastMatch from './LastMatch'
+import Rate from './Rate'
 import Scores from './Scores'
-import AdminPlayers from './AdminPlayers'
-import AdminMatches from './AdminMatches'
+import Season from './Season'
+import TopScorers from './TopScorers'
+import Admin from './Admin'
+
+const TABS = [
+  ['home', 'Home', '🏠'],
+  ['rate', 'Rate', '⭐'],
+  ['table', 'Table', '🏆'],
+  ['me', 'Me', '👤'],
+]
 
 export default function App() {
   const [session, setSession] = useState(null)
   const [player, setPlayer] = useState(null)
   const [loadError, setLoadError] = useState('')
   const [checking, setChecking] = useState(true)
-  const [changing, setChanging] = useState(false)
   const [fetching, setFetching] = useState(false)
+  const [changing, setChanging] = useState(false)
+  const [tab, setTab] = useState('home')
   const [route, setRoute] = useState(window.location.hash)
 
   useEffect(() => {
@@ -39,6 +49,7 @@ export default function App() {
     if (!session) {
       setPlayer(null)
       setLoadError('')
+      setTab('home')
       return
     }
     setFetching(true)
@@ -100,17 +111,61 @@ export default function App() {
     )
   }
 
+  const userId = session.user.id
+  const isAdmin = player.role === 'admin'
+  const tabs = isAdmin ? [...TABS, ['admin', 'Admin', '⚙️']] : TABS
+  const active = tabs.some((t) => t[0] === tab) ? tab : 'home'
+
   return (
-    <div className="card">
-      <h1>⚽ Lepro Ballers</h1>
-      <p>Welcome, {player.name}!</p>
-      <p className="muted">Role: {player.role}</p>
-      <Rate userId={session.user.id} />
-      <Scores userId={session.user.id} />
-      {player.role === 'admin' && <AdminMatches />}
-      {player.role === 'admin' && <AdminPlayers />}
-      <button onClick={() => setChanging(true)}>Change password</button>
-      <button onClick={() => supabase.auth.signOut()}>Log out</button>
+    <div className="app">
+      <header className="topbar">
+        <span className="brand">⚽ Lepro Ballers</span>
+        <span className="who">{player.name}</span>
+      </header>
+
+      <main className="card">
+        {active === 'home' && (
+          <>
+            <Scores userId={userId} show="card" />
+            <LastMatch />
+            <TopScorers />
+          </>
+        )}
+        {active === 'rate' && <Rate userId={userId} />}
+        {active === 'table' && <Scores userId={userId} show="table" />}
+        {active === 'me' && (
+          <>
+            <Scores userId={userId} show="detail" />
+            <Season userId={userId} />
+            <div className="section">
+              <h2>Account</h2>
+              <div className="actions left">
+                <button className="small" onClick={() => setChanging(true)}>
+                  Change password
+                </button>
+                <button className="small" onClick={() => supabase.auth.signOut()}>
+                  Log out
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+        {active === 'admin' && isAdmin && <Admin />}
+      </main>
+
+      <nav className="tabbar">
+        {tabs.map(([key, label, icon]) => (
+          <button
+            type="button"
+            key={key}
+            className={'tab' + (active === key ? ' on' : '')}
+            onClick={() => setTab(key)}
+          >
+            <span className="ico">{icon}</span>
+            {label}
+          </button>
+        ))}
+      </nav>
     </div>
   )
 }

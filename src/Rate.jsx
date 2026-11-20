@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react'
 import { supabase } from './supabaseClient'
 
 const CATS = [
-  ['attack', 'Attack'],
-  ['defence', 'Defence'],
+  ['passing', 'Passing'],
+  ['shooting', 'Shooting'],
+  ['defending', 'Defending'],
+  ['dribbling', 'Dribbling'],
+  ['work_rate', 'Work rate'],
   ['teamwork', 'Teamwork'],
-  ['effort', 'Effort'],
 ]
 const LABELS = [
   [1, 'Bad'],
@@ -99,10 +101,7 @@ export default function Rate({ userId }) {
         match_id: active.id,
         rater_id: userId,
         rated_id: t.id,
-        attack: sc.attack,
-        defence: sc.defence,
-        teamwork: sc.teamwork,
-        effort: sc.effort,
+        ...Object.fromEntries(CATS.map(([k]) => [k, sc[k]])),
       })
     }
     if (rows.length === 0) {
