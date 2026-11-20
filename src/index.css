@@ -123,6 +123,17 @@ button.small:hover { background: var(--pitch); color: #fff; }
   border-bottom: 1px solid var(--line);
 }
 .row.pick { cursor: pointer; font-size: 16px; color: var(--ink); }
+.match-admin-summary {
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+}
+.match-admin-summary:focus-visible {
+  outline: 2px solid var(--grass);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
 .actions { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
 
 /* Player action dropdown */

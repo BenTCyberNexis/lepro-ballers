@@ -37,6 +37,20 @@ export default function AdminMatches() {
   const [resultLoading, setResultLoading] = useState(false)
   const [resultSaving, setResultSaving] = useState(false)
   const [detailsMatchId, setDetailsMatchId] = useState(null)
+  const [openMatchMenu, setOpenMatchMenu] = useState(null)
+
+  useEffect(() => {
+    if (openMatchMenu === null) return
+
+    function handleOutsideClick(event) {
+      if (!event.target.closest('.player-menu-wrap')) {
+        setOpenMatchMenu(null)
+      }
+    }
+
+    document.addEventListener('pointerdown', handleOutsideClick)
+    return () => document.removeEventListener('pointerdown', handleOutsideClick)
+  }, [openMatchMenu])
 
   async function load() {
     const { data: p } = await supabase
@@ -535,6 +549,49 @@ export default function AdminMatches() {
     else load()
   }
 
+  async function deleteMatch(id) {
+    const match = matches.find((m) => String(m.id) === String(id))
+    const confirmed = window.confirm(
+      `Permanently delete this match${match?.venue ? ` at ${match.venue}` : ''}? This will also delete all player ratings, goals, and squad records. This cannot be undone.`
+    )
+
+    if (!confirmed) return
+
+    setError('')
+
+    for (const table of ['ratings', 'goals', 'match_players']) {
+      const { error } = await supabase
+        .from(table)
+        .delete()
+        .eq('match_id', id)
+
+      if (error) {
+        setError(`Could not delete ${table}: ${error.message}`)
+        return
+      }
+    }
+
+    const { error } = await supabase
+      .from('matches')
+      .delete()
+      .eq('id', id)
+
+    if (error) {
+      setError(`Could not delete match: ${error.message}`)
+      return
+    }
+
+    if (String(selectedMatchId) === String(id)) {
+      setSelectedMatchId(null)
+      setResultSquad([])
+      setGoalEntries([])
+    }
+    if (String(detailsMatchId) === String(id)) setDetailsMatchId(null)
+
+    await load()
+    setError('Match and all associated records deleted successfully.')
+  }
+
   const byId = Object.fromEntries(resultSquad.map((p) => [p.id, p]))
   const createSquad = [
     ...players.filter((p) => teamA.includes(p.id)).map((p) => ({ ...p, team: 'A' })),
@@ -896,50 +953,74 @@ export default function AdminMatches() {
       )}
 
       {matches.map((m) => (
-        <div className="row" key={m.id}>
-          <span>
-            {formatMatchDate(m.match_date)} {m.venue && `· ${m.venue}`}
-            <br />
-            <strong>
-              {m.result?.hasResult
-                ? `Team A ${m.result.teamA} – ${m.result.teamB} Team B`
-                : 'Result pending'}
-            </strong>
-            <br />
-            <span className="muted">
-              {m.status === 'open'
-                ? 'Open until ' + new Date(m.rating_closes_at).toLocaleString()
-                : 'Closed'}
+        <div className="row match-admin-row" key={m.id}>
+          <div
+            className="match-admin-summary"
+            role="button"
+            tabIndex={0}
+            onClick={() => setDetailsMatchId(m.id)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                setDetailsMatchId(m.id)
+              }
+            }}
+          >
+            <span>
+              {formatMatchDate(m.match_date)} {m.venue && `· ${m.venue}`}
+              <br />
+              <strong>
+                {m.result?.hasResult
+                  ? `Team A ${m.result.teamA} – ${m.result.teamB} Team B`
+                  : 'Result pending'}
+              </strong>
+              <br />
+              <span className="muted">
+                {m.status === 'open'
+                  ? 'Open until ' + new Date(m.rating_closes_at).toLocaleString()
+                  : 'Closed'}
+              </span>
             </span>
-          </span>
+          </div>
 
-          <span className="actions">
+          <div className="player-menu-wrap">
             <button
               type="button"
-              className="small"
-              onClick={() => setDetailsMatchId(m.id)}
+              className="player-menu-trigger"
+              aria-label={`Actions for match ${m.id}`}
+              aria-expanded={openMatchMenu === m.id}
+              onClick={() => setOpenMatchMenu(openMatchMenu === m.id ? null : m.id)}
             >
-              View details
+              ⋮
             </button>
 
-            <button
-              type="button"
-              className="small"
-              onClick={() => openResults(m.id)}
-            >
-              Enter / edit result
-            </button>
+            {openMatchMenu === m.id && (
+              <div className="player-menu">
+                <button type="button" onClick={() => {
+                  setOpenMatchMenu(null)
+                  openResults(m.id)
+                }}>
+                  Enter / edit result
+                </button>
 
-            {m.status === 'open' && (
-              <button
-                type="button"
-                className="small"
-                onClick={() => closeMatch(m.id)}
-              >
-                Close now
-              </button>
+                {m.status === 'open' && (
+                  <button type="button" onClick={() => {
+                    setOpenMatchMenu(null)
+                    closeMatch(m.id)
+                  }}>
+                    Close now
+                  </button>
+                )}
+
+                <button type="button" onClick={() => {
+                  setOpenMatchMenu(null)
+                  deleteMatch(m.id)
+                }}>
+                  Delete Match
+                </button>
+              </div>
             )}
-          </span>
+          </div>
         </div>
       ))}
 

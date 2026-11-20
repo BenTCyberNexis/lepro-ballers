@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from './supabaseClient'
 import Login from './Login'
 import Signup from './Signup'
@@ -28,12 +28,26 @@ export default function App() {
   const [tab, setTab] = useState('home')
   const [route, setRoute] = useState(window.location.hash)
   const [accountOpen, setAccountOpen] = useState(false)
+  const accountRef = useRef(null)
 
   useEffect(() => {
     const onHash = () => setRoute(window.location.hash)
     window.addEventListener('hashchange', onHash)
     return () => window.removeEventListener('hashchange', onHash)
   }, [])
+
+  useEffect(() => {
+    if (!accountOpen) return
+
+    function handleOutsideClick(event) {
+      if (accountRef.current && !accountRef.current.contains(event.target)) {
+        setAccountOpen(false)
+      }
+    }
+
+    document.addEventListener('pointerdown', handleOutsideClick)
+    return () => document.removeEventListener('pointerdown', handleOutsideClick)
+  }, [accountOpen])
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -121,7 +135,7 @@ export default function App() {
     <div className="app">
       <header className="topbar">
         <span className="brand">⚽ Lepro Ballers</span>
-        <div className="account-wrap">
+        <div className="account-wrap" ref={accountRef}>
           <button
             type="button"
             className="who account-trigger"

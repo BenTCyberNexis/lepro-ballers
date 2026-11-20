@@ -33,6 +33,19 @@ export default function AdminPlayers() {
     supabase.auth.getUser().then(({ data }) => setMeId(data.user?.id))
   }, [])
 
+  useEffect(() => {
+    if (openMenu === null) return
+
+    function handleOutsideClick(event) {
+      if (!event.target.closest('.player-menu-wrap')) {
+        setOpenMenu(null)
+      }
+    }
+
+    document.addEventListener('pointerdown', handleOutsideClick)
+    return () => document.removeEventListener('pointerdown', handleOutsideClick)
+  }, [openMenu])
+
   // Calls the Edge Function (reset / delete) and shows any error it returns
   async function callFunction(body) {
     const { error } = await supabase.functions.invoke('super-service', { body })
