@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabaseClient'
+import { formatMatchDate } from './dateUtils'
 import MatchDetails from './MatchDetails'
 
 const CATS = [
@@ -19,6 +20,7 @@ export default function Scores({ userId, show }) {
   const [history, setHistory] = useState([])
   const [error, setError] = useState('')
   const [selectedMatchId, setSelectedMatchId] = useState(null)
+  const [selectedPlayerId, setSelectedPlayerId] = useState(null)
 
   useEffect(() => {
     async function load() {
@@ -35,14 +37,65 @@ export default function Scores({ userId, show }) {
       const { data: h } = await supabase
         .from('match_scores')
         .select('*')
-        .eq('player_id', userId)
+        .eq('player_id', selectedPlayerId || userId)
       const { data: m } = await supabase
         .from('matches')
-        .select('id, match_date, venue')
+        .select('id, match_date, venue, result_entered')
+
+      const matchIds = (h || []).map((r) => r.match_id)
+
+      const { data: squads } = matchIds.length
+        ? await supabase
+            .from('match_players')
+            .select('match_id, player_id, team')
+            .in('match_id', matchIds)
+        : { data: [] }
+
+      const { data: goals } = matchIds.length
+        ? await supabase
+            .from('goals')
+            .select('match_id, scorer_id, is_own_goal')
+            .in('match_id', matchIds)
+        : { data: [] }
+
       const byId = Object.fromEntries((m || []).map((x) => [x.id, x]))
+      const playerTeams = {}
+
+      ;(squads || []).forEach((player) => {
+        playerTeams[`${player.match_id}:${player.player_id}`] = player.team
+      })
+
+      const results = {}
+      matchIds.forEach((id) => {
+        results[id] = { teamA: 0, teamB: 0, hasResult: Boolean(byId[id]?.result_entered) }
+      })
+
+      ;(goals || []).forEach((goal) => {
+        const scorerTeam = playerTeams[`${goal.match_id}:${goal.scorer_id}`]
+        if (!scorerTeam) return
+
+        const creditedTeam = goal.is_own_goal
+          ? (scorerTeam === 'A' ? 'B' : 'A')
+          : scorerTeam
+
+        if (creditedTeam === 'A') results[goal.match_id].teamA += 1
+        if (creditedTeam === 'B') results[goal.match_id].teamB += 1
+        results[goal.match_id].hasResult = true
+      })
+
+      const myTeams = {}
+      ;(squads || []).forEach((player) => {
+        if (player.player_id === (selectedPlayerId || userId)) myTeams[player.match_id] = player.team
+      })
+
       setHistory(
         (h || [])
-          .map((r) => ({ ...r, match: byId[r.match_id] }))
+          .map((r) => ({
+            ...r,
+            match: byId[r.match_id],
+            result: results[r.match_id],
+            myTeam: myTeams[r.match_id],
+          }))
           .sort((a, b) =>
             (b.match?.match_date || '').localeCompare(a.match?.match_date || '')
           )
@@ -51,9 +104,10 @@ export default function Scores({ userId, show }) {
     load()
     const timer = setInterval(load, 10000)
     return () => clearInterval(timer)
-  }, [userId])
+  }, [userId, selectedPlayerId])
 
-  const mine = stats.find((s) => s.player_id === userId)
+  const activePlayerId = selectedPlayerId || userId
+  const mine = stats.find((s) => s.player_id === activePlayerId)
   const num = (v) => Math.round(Number(v))
   const noRating = (
     <p className="muted">
@@ -61,7 +115,23 @@ export default function Scores({ userId, show }) {
     </p>
   )
 
-  if (show === 'table') {
+  const lastFive = history
+    .filter((r) => r.result?.hasResult && r.myTeam)
+    .slice(0, 5)
+    .map((r) => {
+      const draw = r.result.teamA === r.result.teamB
+      const won =
+        (r.myTeam === 'A' && r.result.teamA > r.result.teamB) ||
+        (r.myTeam === 'B' && r.result.teamB > r.result.teamA)
+
+      return {
+        ...r,
+        form: draw ? 'D' : won ? 'W' : 'L',
+        winner: draw ? 'draw' : r.result.teamA > r.result.teamB ? 'A' : 'B',
+      }
+    })
+
+  if (show === 'table' && !selectedPlayerId) {
     return (
       <div className="section">
         <h2>Leaderboard</h2>
@@ -70,7 +140,14 @@ export default function Scores({ userId, show }) {
         {stats.map((s, i) => (
           <div className={'row' + (s.player_id === userId ? ' me' : '')} key={s.player_id}>
             <span>
-              {i + 1}. {s.name}
+              {i + 1}.{' '}
+              <button
+                type="button"
+                className="small"
+                onClick={() => setSelectedPlayerId(s.player_id)}
+              >
+                {s.name}
+              </button>
             </span>
             <strong>{num(s.overall)}</strong>
           </div>
@@ -96,6 +173,33 @@ export default function Scores({ userId, show }) {
                   Based on {mine.matches_rated} match{mine.matches_rated > 1 ? 'es' : ''}
                 </div>
               </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '12px 0' }}>
+              <strong style={{ fontSize: '12px' }}>FORM</strong>
+              {lastFive.map((r) => (
+                <span
+                  key={r.match_id}
+                  title={`${formatMatchDate(r.match?.match_date) || 'Match'}: ${r.form}`}
+                  style={{
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '50%',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: '700',
+                    color: '#fff',
+                    backgroundColor:
+                      r.form === 'W'
+                        ? '#16a34a'
+                        : r.form === 'D'
+                          ? '#2563eb'
+                          : '#dc2626',
+                  }}
+                >
+                  {r.form}
+                </span>
+              ))}
             </div>
             <div className="fut-stats">
               {CATS.map(([key, label]) => (
@@ -126,7 +230,16 @@ export default function Scores({ userId, show }) {
 
   return (
     <div className="section">
-      <h2>My ratings</h2>
+      {selectedPlayerId && (
+        <button
+          type="button"
+          className="small"
+          onClick={() => setSelectedPlayerId(null)}
+        >
+          ← Back to leaderboard
+        </button>
+      )}
+      <h2>{selectedPlayerId ? `${mine?.name || 'Player'}'s Performance` : 'My ratings'}</h2>
       {error && <p className="error">{error}</p>}
       {!mine ? (
         noRating
@@ -141,6 +254,40 @@ export default function Scores({ userId, show }) {
                 {mine.matches_rated > 1 ? 'es' : ''}
               </div>
             </div>
+          </div>
+
+          <div style={{ margin: '20px 0' }}>
+            <h2>FORM</h2>
+            {lastFive.length === 0 ? (
+              <p className="muted">No completed matches with results yet.</p>
+            ) : (
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                {lastFive.map((r) => (
+                  <span
+                    key={r.match_id}
+                    title={`${formatMatchDate(r.match?.match_date) || 'Match'}: ${r.form}`}
+                    style={{
+                      width: '34px',
+                      height: '34px',
+                      borderRadius: '50%',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontWeight: '700',
+                      color: '#fff',
+                      backgroundColor:
+                        r.form === 'W'
+                          ? '#16a34a'
+                          : r.form === 'D'
+                            ? '#2563eb'
+                            : '#dc2626',
+                    }}
+                  >
+                    {r.form}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
 
           <h2>By category</h2>
@@ -182,7 +329,24 @@ export default function Scores({ userId, show }) {
             <div className="match-block" key={r.match_id}>
               <div className="row">
                 <span>
-                  {r.match?.match_date} {r.match?.venue && `· ${r.match.venue}`}
+                  {formatMatchDate(r.match?.match_date)} {r.match?.venue && `· ${r.match.venue}`}
+                  <br />
+                  <strong>
+                    {r.result?.hasResult
+                      ? `Team A ${r.result.teamA} – ${r.result.teamB} Team B`
+                      : 'Result pending'}
+                  </strong>
+                  {r.result?.hasResult && r.myTeam && (
+                    <span className="muted">
+                      {' · '}
+                      {r.result.teamA === r.result.teamB
+                        ? 'Draw (D)'
+                        : (r.myTeam === 'A' && r.result.teamA > r.result.teamB) ||
+                            (r.myTeam === 'B' && r.result.teamB > r.result.teamA)
+                          ? 'Win (W)'
+                          : 'Loss (L)'}
+                    </span>
+                  )}
                 </span>
                 <strong>{num(r.overall)}</strong>
               </div>

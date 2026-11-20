@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabaseClient'
+import { formatMatchDate } from './dateUtils'
 import MatchDetails from './MatchDetails'
 
 const pad = (n) => String(n).padStart(2, '0')
@@ -11,6 +12,7 @@ const emptyGoal = (team) => ({
   team,
   scorer_id: '',
   assist_id: '',
+  is_own_goal: false,
 })
 
 export default function AdminMatches() {
@@ -25,6 +27,7 @@ export default function AdminMatches() {
   const [teamB, setTeamB] = useState([])
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
+  const [showCreateForm, setShowCreateForm] = useState(false)
 
   const [selectedMatchId, setSelectedMatchId] = useState('')
   const [resultSquad, setResultSquad] = useState([])
@@ -45,9 +48,57 @@ export default function AdminMatches() {
 
     const { data: m } = await supabase
       .from('matches')
-      .select('id, match_date, venue, status, rating_closes_at')
+      .select('id, match_date, venue, status, rating_closes_at, result_entered')
       .order('match_date', { ascending: false })
-    setMatches(m || [])
+
+    const matchList = m || []
+
+    if (matchList.length === 0) {
+      setMatches([])
+      return
+    }
+
+    const matchIds = matchList.map((match) => match.id)
+
+    const { data: squads } = await supabase
+      .from('match_players')
+      .select('match_id, player_id, team')
+      .in('match_id', matchIds)
+
+    const { data: goals } = await supabase
+      .from('goals')
+      .select('match_id, scorer_id, is_own_goal')
+      .in('match_id', matchIds)
+
+    const playerTeams = {}
+    ;(squads || []).forEach((player) => {
+      playerTeams[`${player.match_id}:${player.player_id}`] = player.team
+    })
+
+    const results = {}
+    matchList.forEach((match) => {
+      results[match.id] = { teamA: 0, teamB: 0, hasResult: Boolean(match.result_entered) }
+    })
+
+    ;(goals || []).forEach((goal) => {
+      const scorerTeam = playerTeams[`${goal.match_id}:${goal.scorer_id}`]
+      if (!scorerTeam) return
+
+      const creditedTeam = goal.is_own_goal
+        ? (scorerTeam === 'A' ? 'B' : 'A')
+        : scorerTeam
+
+      if (creditedTeam === 'A') results[goal.match_id].teamA += 1
+      if (creditedTeam === 'B') results[goal.match_id].teamB += 1
+      results[goal.match_id].hasResult = true
+    })
+
+    setMatches(
+      matchList.map((match) => ({
+        ...match,
+        result: results[match.id],
+      }))
+    )
   }
 
   useEffect(() => {
@@ -115,7 +166,7 @@ export default function AdminMatches() {
 
     const { data: g, error: goalError } = await supabase
       .from('goals')
-      .select('id, scorer_id, assist_id')
+      .select('id, scorer_id, assist_id, is_own_goal')
       .eq('match_id', id)
       .order('created_at')
 
@@ -131,9 +182,12 @@ export default function AdminMatches() {
 
     const existingGoals = (g || []).map((goal) => ({
       id: goal.id,
-      team: teamByPlayer[goal.scorer_id] || 'A',
+      team: goal.is_own_goal
+        ? (teamByPlayer[goal.scorer_id] === 'A' ? 'B' : 'A')
+        : (teamByPlayer[goal.scorer_id] || 'A'),
       scorer_id: goal.scorer_id,
       assist_id: goal.assist_id || '',
+      is_own_goal: goal.is_own_goal || false,
     }))
 
     const aGoals = existingGoals.filter((goal) => goal.team === 'A')
@@ -203,6 +257,148 @@ export default function AdminMatches() {
     await openResults(match.id)
   }
 
+  async function saveMatchWithResult(e) {
+    e.preventDefault()
+    setError('')
+
+    if (teamA.length === 0 || teamB.length === 0) {
+      setError('Pick at least one player for each team')
+      return
+    }
+
+    const newSquad = [
+      ...players.filter((p) => teamA.includes(p.id)).map((p) => ({ ...p, team: 'A' })),
+      ...players.filter((p) => teamB.includes(p.id)).map((p) => ({ ...p, team: 'B' })),
+    ]
+
+    const incomplete = goalEntries.findIndex((goal) => !goal.scorer_id)
+    if (incomplete !== -1) {
+      setError(`Please select the scorer for ${goalEntries[incomplete].team === 'A' ? 'Team A' : 'Team B'} goal ${goalEntries.filter((g, i) => g.team === goalEntries[incomplete].team && i <= incomplete).length}.`)
+      return
+    }
+
+    for (const goal of goalEntries) {
+      const scorer = newSquad.find((p) => p.id === goal.scorer_id)
+      const assister = newSquad.find((p) => p.id === goal.assist_id)
+
+      const expectedScorerTeam = goal.is_own_goal
+        ? (goal.team === 'A' ? 'B' : 'A')
+        : goal.team
+
+      if (!scorer || scorer.team !== expectedScorerTeam) {
+        setError('The scorer must belong to the correct team.')
+        return
+      }
+
+      if (goal.is_own_goal && goal.assist_id) {
+        setError('Own goals cannot have an assist.')
+        return
+      }
+
+      if (goal.assist_id && (!assister || assister.team !== goal.team)) {
+        setError('The assister must belong to the same team as the scorer.')
+        return
+      }
+
+      if (goal.assist_id && goal.assist_id === goal.scorer_id) {
+        setError('The scorer and assister must be different players.')
+        return
+      }
+    }
+
+    setSaving(true)
+
+    const { data: u } = await supabase.auth.getUser()
+
+    if (!u.user) {
+      setError('You must be logged in to create a match')
+      setSaving(false)
+      return
+    }
+
+    const { data: match, error: matchError } = await supabase
+      .from('matches')
+      .insert({
+        match_date: date,
+        venue: venue.trim() || null,
+        rating_closes_at: new Date(closesAt).toISOString(),
+        created_by: u.user.id,
+      })
+      .select()
+      .single()
+
+    if (matchError) {
+      setError(matchError.message)
+      setSaving(false)
+      return
+    }
+
+    const rollback = async () => {
+      await supabase.from('goals').delete().eq('match_id', match.id)
+      await supabase.from('match_players').delete().eq('match_id', match.id)
+      await supabase.from('matches').delete().eq('id', match.id)
+    }
+
+    const squadRows = [
+      ...teamA.map((player_id) => ({ match_id: match.id, player_id, team: 'A' })),
+      ...teamB.map((player_id) => ({ match_id: match.id, player_id, team: 'B' })),
+    ]
+
+    const { error: squadError } = await supabase
+      .from('match_players')
+      .insert(squadRows)
+
+    if (squadError) {
+      await rollback()
+      setError(squadError.message)
+      setSaving(false)
+      return
+    }
+
+    if (goalEntries.length > 0) {
+      const goalRows = goalEntries.map((goal) => ({
+        match_id: match.id,
+        scorer_id: goal.scorer_id,
+        assist_id: goal.is_own_goal ? null : (goal.assist_id || null),
+        is_own_goal: Boolean(goal.is_own_goal),
+      }))
+
+      const { error: goalsError } = await supabase
+        .from('goals')
+        .insert(goalRows)
+
+      if (goalsError) {
+        await rollback()
+        setError(goalsError.message)
+        setSaving(false)
+        return
+      }
+    }
+
+    const { error: resultError } = await supabase
+      .from('matches')
+      .update({ result_entered: true })
+      .eq('id', match.id)
+
+    if (resultError) {
+      await rollback()
+      setError(resultError.message)
+      setSaving(false)
+      return
+    }
+
+    setTeamA([])
+    setTeamB([])
+    setGoalEntries([])
+    setScoreA('0')
+    setScoreB('0')
+    setVenue('')
+    setSaving(false)
+    setShowCreateForm(false)
+    await load()
+    setError('Match saved successfully.')
+  }
+
   async function saveResult() {
     setError('')
 
@@ -216,8 +412,17 @@ export default function AdminMatches() {
       const scorer = resultSquad.find((p) => p.id === goal.scorer_id)
       const assister = resultSquad.find((p) => p.id === goal.assist_id)
 
-      if (!scorer || scorer.team !== goal.team) {
-        setError('Each goal scorer must belong to the team that scored.')
+      const expectedScorerTeam = goal.is_own_goal
+        ? (goal.team === 'A' ? 'B' : 'A')
+        : goal.team
+
+      if (!scorer || scorer.team !== expectedScorerTeam) {
+        setError('The scorer must belong to the correct team.')
+        return
+      }
+
+      if (goal.is_own_goal && goal.assist_id) {
+        setError('Own goals cannot have an assist.')
         return
       }
 
@@ -240,7 +445,8 @@ export default function AdminMatches() {
       const values = {
         match_id: Number(selectedMatchId),
         scorer_id: goal.scorer_id,
-        assist_id: goal.assist_id || null,
+        assist_id: goal.is_own_goal ? null : (goal.assist_id || null),
+        is_own_goal: Boolean(goal.is_own_goal),
       }
 
       if (goal.id) {
@@ -301,7 +507,19 @@ export default function AdminMatches() {
       }
     }
 
+    const { error: matchUpdateError } = await supabase
+      .from('matches')
+      .update({ result_entered: true })
+      .eq('id', Number(selectedMatchId))
+
+    if (matchUpdateError) {
+      setError(matchUpdateError.message)
+      setResultSaving(false)
+      return
+    }
+
     setResultSaving(false)
+    await load()
     await openResults(selectedMatchId)
     setError('Result saved successfully.')
   }
@@ -318,6 +536,11 @@ export default function AdminMatches() {
   }
 
   const byId = Object.fromEntries(resultSquad.map((p) => [p.id, p]))
+  const createSquad = [
+    ...players.filter((p) => teamA.includes(p.id)).map((p) => ({ ...p, team: 'A' })),
+    ...players.filter((p) => teamB.includes(p.id)).map((p) => ({ ...p, team: 'B' })),
+  ]
+  const createById = Object.fromEntries(createSquad.map((p) => [p.id, p]))
 
   const selectedMatch = matches.find(
     (m) => String(m.id) === String(selectedMatchId)
@@ -325,9 +548,19 @@ export default function AdminMatches() {
 
   return (
     <div className="section">
+      <button
+        type="button"
+        className="primary"
+        onClick={() => setShowCreateForm((visible) => !visible)}
+      >
+        {showCreateForm ? 'Cancel' : '+ Create Match'}
+      </button>
+
+      {showCreateForm && (
+      <div className="section">
       <h2>Create match</h2>
 
-      <form onSubmit={createMatch}>
+      <form onSubmit={saveMatchWithResult}>
         <label className="muted">Match date</label>
         <input
           type="date"
@@ -378,18 +611,122 @@ export default function AdminMatches() {
             </label>
           ))}
 
+        <h2>Final score</h2>
+        <div className="row">
+          <label>
+            <strong>Team A</strong>
+            <input
+              type="number"
+              min="0"
+              max="99"
+              value={scoreA}
+              onChange={(e) => resizeGoals('A', e.target.value)}
+            />
+          </label>
+          <label>
+            <strong>Team B</strong>
+            <input
+              type="number"
+              min="0"
+              max="99"
+              value={scoreB}
+              onChange={(e) => resizeGoals('B', e.target.value)}
+            />
+          </label>
+        </div>
+
+        <h2>Goal details</h2>
+        <p className="muted">Select the scorer for every goal. Assists are optional.</p>
+
+        {goalEntries.map((goal, index) => {
+          const scorerTeam = goal.is_own_goal
+            ? (goal.team === 'A' ? 'B' : 'A')
+            : goal.team
+          const teamPlayers = createSquad.filter((p) => p.team === scorerTeam)
+          const teamGoalNumber = goalEntries
+            .slice(0, index + 1)
+            .filter((g) => g.team === goal.team).length
+
+          return (
+            <div className="section" key={`create-${goal.team}-${teamGoalNumber}`}>
+              <h3>Team {goal.team} · Goal {teamGoalNumber}</h3>
+
+              <label className="row pick">
+                <span>Own goal</span>
+                <input
+                  type="checkbox"
+                  checked={Boolean(goal.is_own_goal)}
+                  onChange={(e) => {
+                    updateGoal(index, 'is_own_goal', e.target.checked)
+                    if (e.target.checked) updateGoal(index, 'assist_id', '')
+                  }}
+                />
+              </label>
+
+              <label className="muted">
+                Who scored? {goal.is_own_goal ? '(opposing player)' : ''}
+              </label>
+              <select
+                value={goal.scorer_id}
+                onChange={(e) => updateGoal(index, 'scorer_id', e.target.value)}
+              >
+                <option value="">Choose goal scorer</option>
+                {teamPlayers.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+
+              {!goal.is_own_goal && (
+                <>
+                  <label className="muted">Who assisted? (Optional)</label>
+                  <select
+                    value={goal.assist_id}
+                    onChange={(e) => updateGoal(index, 'assist_id', e.target.value)}
+                  >
+                    <option value="">No assist</option>
+                    {teamPlayers
+                      .filter((p) => p.id !== goal.scorer_id)
+                      .map((p) => (
+                        <option key={p.id} value={p.id}>{p.name}</option>
+                      ))}
+                  </select>
+                </>
+              )}
+            </div>
+          )
+        })}
+
+        <h3>Result preview</h3>
+        <p><strong>Team A {scoreA || 0} – {scoreB || 0} Team B</strong></p>
+        {goalEntries.map((goal, index) => (
+          <p key={`create-preview-${index}`}>
+            ⚽ Team {goal.team}:{' '}
+            <strong style={{ color: goal.is_own_goal ? '#ef4444' : '#ffffff' }}>
+              {createById[goal.scorer_id]?.name || 'Scorer not selected'}
+              {goal.is_own_goal && ' (OG)'}
+            </strong>
+            {!goal.is_own_goal && (
+              goal.assist_id
+                ? ` · Assist: ${createById[goal.assist_id]?.name || 'Unknown'}`
+                : ' · No assist'
+            )}
+          </p>
+        ))}
+
         {error && !selectedMatchId && <p className="error">{error}</p>}
 
         <button disabled={saving}>
-          {saving ? 'Creating...' : 'Create match'}
+          {saving ? 'Saving match...' : 'Save Match'}
         </button>
       </form>
+      </div>
+      )}
 
       {selectedMatchId && (
         <div className="section">
           <h2>
             Enter match result
-            {selectedMatch && ` · ${selectedMatch.match_date}`}
+            {selectedMatch && ` · ${formatMatchDate(selectedMatch.match_date)}`}
           </h2>
 
           {selectedMatch?.venue && (
@@ -436,8 +773,12 @@ export default function AdminMatches() {
               )}
 
               {goalEntries.map((goal, index) => {
+                const scorerTeam = goal.is_own_goal
+                  ? (goal.team === 'A' ? 'B' : 'A')
+                  : goal.team
+
                 const teamPlayers = resultSquad.filter(
-                  (p) => p.team === goal.team
+                  (p) => p.team === scorerTeam
                 )
 
                 const teamGoalNumber =
@@ -451,7 +792,23 @@ export default function AdminMatches() {
                       Team {goal.team} · Goal {teamGoalNumber}
                     </h3>
 
-                    <label className="muted">Who scored?</label>
+                    <label className="row pick">
+                      <span>Own goal</span>
+                      <input
+                        type="checkbox"
+                        checked={Boolean(goal.is_own_goal)}
+                        onChange={(e) => {
+                          updateGoal(index, 'is_own_goal', e.target.checked)
+                          if (e.target.checked) {
+                            updateGoal(index, 'assist_id', '')
+                          }
+                        }}
+                      />
+                    </label>
+
+                    <label className="muted">
+                      Who scored? {goal.is_own_goal ? '(opposing player)' : ''}
+                    </label>
                     <select
                       value={goal.scorer_id}
                       onChange={(e) =>
@@ -464,6 +821,8 @@ export default function AdminMatches() {
                       ))}
                     </select>
 
+                    {!goal.is_own_goal && (
+                    <>
                     <label className="muted">Who assisted? (Optional)</label>
                     <select
                       value={goal.assist_id}
@@ -478,6 +837,8 @@ export default function AdminMatches() {
                           <option key={p.id} value={p.id}>{p.name}</option>
                         ))}
                     </select>
+                    </>
+                    )}
                   </div>
                 )
               })}
@@ -491,10 +852,16 @@ export default function AdminMatches() {
                 <div>
                   {goalEntries.map((goal, index) => (
                     <p key={`${goal.team}-preview-${index}`}>
-                      ⚽ Team {goal.team}: {byId[goal.scorer_id]?.name || 'Scorer not selected'}
-                      {goal.assist_id
-                        ? ` · Assist: ${byId[goal.assist_id]?.name || 'Unknown'}`
-                        : ' · No assist'}
+                      ⚽ Team {goal.team}:{' '}
+                      <strong style={{ color: goal.is_own_goal ? '#ef4444' : '#ffffff' }}>
+                        {byId[goal.scorer_id]?.name || 'Scorer not selected'}
+                        {goal.is_own_goal && ' (OG)'}
+                      </strong>
+                      {!goal.is_own_goal && (
+                        goal.assist_id
+                          ? ` · Assist: ${byId[goal.assist_id]?.name || 'Unknown'}`
+                          : ' · No assist'
+                      )}
                     </p>
                   ))}
                 </div>
@@ -531,7 +898,13 @@ export default function AdminMatches() {
       {matches.map((m) => (
         <div className="row" key={m.id}>
           <span>
-            {m.match_date} {m.venue && `· ${m.venue}`}
+            {formatMatchDate(m.match_date)} {m.venue && `· ${m.venue}`}
+            <br />
+            <strong>
+              {m.result?.hasResult
+                ? `Team A ${m.result.teamA} – ${m.result.teamB} Team B`
+                : 'Result pending'}
+            </strong>
             <br />
             <span className="muted">
               {m.status === 'open'

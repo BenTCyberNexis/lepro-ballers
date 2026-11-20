@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabaseClient'
+import { formatMatchDate } from './dateUtils'
 import MatchDetails from './MatchDetails'
 
 export default function LastMatch() {
@@ -11,7 +12,7 @@ export default function LastMatch() {
     async function load() {
       const { data: m } = await supabase
         .from('matches')
-        .select('id, match_date, venue')
+        .select('id, match_date, venue, result_entered')
         .order('match_date', { ascending: false })
         .order('id', { ascending: false })
         .limit(1)
@@ -30,18 +31,11 @@ export default function LastMatch() {
 
       const { data: g } = await supabase
         .from('goals')
-        .select('id, scorer_id, assist_id')
+        .select('id, scorer_id, assist_id, is_own_goal')
         .eq('match_id', match.id)
         .order('created_at')
 
-      const { data: top } = await supabase
-        .from('match_scores')
-        .select('player_id, overall')
-        .eq('match_id', match.id)
-        .order('overall', { ascending: false })
-        .limit(1)
-
-      setInfo({ match, squad: mp || [], goals: g || [], top: top?.[0] || null })
+      setInfo({ match, squad: mp || [], goals: g || [] })
       setLoaded(true)
     }
 
@@ -61,7 +55,7 @@ export default function LastMatch() {
     )
   }
 
-  const { match, squad, goals, top } = info
+  const { match, squad, goals } = info
   const byId = Object.fromEntries(
     squad.map((p) => [
       p.player_id,
@@ -69,44 +63,31 @@ export default function LastMatch() {
     ])
   )
 
-  const teamGoals = (team) =>
-    goals.filter((g) => byId[g.scorer_id]?.team === team).length
+  const creditedTeam = (goal) => {
+    const scorerTeam = byId[goal.scorer_id]?.team
+    if (!scorerTeam) return null
+    return goal.is_own_goal
+      ? (scorerTeam === 'A' ? 'B' : 'A')
+      : scorerTeam
+  }
+
+  const teamAGoals = goals.filter((g) => creditedTeam(g) === 'A').length
+  const teamBGoals = goals.filter((g) => creditedTeam(g) === 'B').length
 
   return (
     <>
       <div className="section">
         <h2>Last match</h2>
         <p className="muted">
-          {match.match_date} {match.venue && `· ${match.venue}`}
+          {formatMatchDate(match.match_date)} {match.venue && `· ${match.venue}`}
         </p>
 
-        {goals.length === 0 ? (
-          <p className="muted">Result not entered yet.</p>
-        ) : (
-          <>
-            <p className="score">
-              Team A {teamGoals('A')} – {teamGoals('B')} Team B
-            </p>
-            {goals.map((g) => (
-              <div className="row" key={g.id}>
-                <span>⚽ {byId[g.scorer_id]?.name ?? 'Player'}</span>
-                <span className="muted">
-                  {g.assist_id
-                    ? 'assist: ' + (byId[g.assist_id]?.name ?? 'Player')
-                    : ''}
-                </span>
-              </div>
-            ))}
-          </>
-        )}
-
-        {top ? (
-          <p>
-            ⭐ Top rated: <strong>{byId[top.player_id]?.name ?? 'Player'}</strong>{' '}
-            <span className="muted">({Math.round(Number(top.overall))})</span>
+        {match.result_entered ? (
+          <p className="score">
+            Team A {teamAGoals} – {teamBGoals} Team B
           </p>
         ) : (
-          <p className="muted">Ratings are still coming in.</p>
+          <p className="muted">Result not entered yet.</p>
         )}
 
         <button

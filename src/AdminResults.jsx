@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabaseClient'
+import { formatMatchDate } from './dateUtils'
 
 export default function AdminResults() {
   const [matches, setMatches] = useState([])
@@ -90,7 +91,7 @@ export default function AdminResults() {
         <option value="">Choose a match</option>
         {matches.map((m) => (
           <option key={m.id} value={m.id}>
-            {m.match_date} {m.venue ? '· ' + m.venue : ''}
+            {formatMatchDate(m.match_date)} {m.venue ? '· ' + m.venue : ''}
           </option>
         ))}
       </select>

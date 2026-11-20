@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabaseClient'
+import { formatMatchDate } from './dateUtils'
 
 export default function MatchDetails({ matchId, onClose, isAdmin = false, onEdit }) {
   const [match, setMatch] = useState(null)
@@ -37,7 +38,7 @@ export default function MatchDetails({ matchId, onClose, isAdmin = false, onEdit
 
       const { data: goalData, error: goalError } = await supabase
         .from('goals')
-        .select('id, scorer_id, assist_id')
+        .select('id, scorer_id, assist_id, is_own_goal')
         .eq('match_id', matchId)
         .order('created_at')
 
@@ -77,8 +78,14 @@ export default function MatchDetails({ matchId, onClose, isAdmin = false, onEdit
   }, [matchId])
 
   const byId = Object.fromEntries(squad.map((p) => [p.id, p]))
-  const teamAGoals = goals.filter((g) => byId[g.scorer_id]?.team === 'A')
-  const teamBGoals = goals.filter((g) => byId[g.scorer_id]?.team === 'B')
+  const creditedTeam = (goal) => {
+    const scorerTeam = byId[goal.scorer_id]?.team
+    if (!scorerTeam) return null
+    return goal.is_own_goal ? (scorerTeam === 'A' ? 'B' : 'A') : scorerTeam
+  }
+
+  const teamAGoals = goals.filter((g) => creditedTeam(g) === 'A')
+  const teamBGoals = goals.filter((g) => creditedTeam(g) === 'B')
 
   return (
     <div className="match-modal-overlay" onClick={onClose}>
@@ -106,7 +113,7 @@ export default function MatchDetails({ matchId, onClose, isAdmin = false, onEdit
         ) : (
           <>
             <div className="match-modal-meta">
-              <span>{match?.match_date}</span>
+              <span>{formatMatchDate(match?.match_date)}</span>
               {match?.venue && <span>📍 {match.venue}</span>}
               <span>{match?.status === 'open' ? 'Ratings open' : 'Match closed'}</span>
             </div>
@@ -138,15 +145,21 @@ export default function MatchDetails({ matchId, onClose, isAdmin = false, onEdit
                 {goals.map((goal) => {
                   const scorer = byId[goal.scorer_id]
                   const assister = byId[goal.assist_id]
+                  const scoringTeam = creditedTeam(goal)
 
                   return (
                     <div className="match-goal-row" key={goal.id}>
-                      <span>{scorer?.team === 'A' ? '🟠' : '🟢'}</span>
+                      <span>{scoringTeam === 'A' ? '🟠' : '🟢'}</span>
                       <div>
-                        <strong>{scorer?.name || 'Unknown player'}</strong>
-                        <small>
-                          {assister ? `Assist: ${assister.name}` : 'Unassisted'}
-                        </small>
+                        <strong style={{ color: goal.is_own_goal ? '#ef4444' : '#ffffff' }}>
+                          {scorer?.name || 'Unknown player'}
+                          {goal.is_own_goal && ' (OG)'}
+                        </strong>
+                        {!goal.is_own_goal && (
+                          <small>
+                            {assister ? `Assist: ${assister.name}` : 'Unassisted'}
+                          </small>
+                        )}
                       </div>
                     </div>
                   )
