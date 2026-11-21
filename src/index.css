@@ -709,3 +709,214 @@ body:has(.login-page) #root { min-height: 100vh; }
     font-size: 16px;
   }
 }
+
+/* Larger mobile login and navigation typography */
+@media (max-width: 600px) {
+  .login-panel {
+    padding: 32px 22px;
+  }
+
+  .login-form-wrap {
+    max-width: 520px;
+  }
+
+  .login-mobile-brand {
+    font-size: 20px;
+    margin-bottom: 38px;
+  }
+
+  .login-heading h2 {
+    font-size: 38px;
+  }
+
+  .login-heading p {
+    font-size: 17px;
+    line-height: 1.5;
+  }
+
+  .login-form label {
+    font-size: 16px;
+  }
+
+  .login-input-wrap {
+    min-height: 62px;
+  }
+
+  .login-input-wrap input {
+    height: 60px;
+    font-size: 18px;
+  }
+
+  .login-password-label a,
+  .login-signup,
+  .login-signup a {
+    font-size: 16px;
+  }
+
+  .login-show-password {
+    font-size: 14px;
+    padding: 10px 6px;
+  }
+
+  .login-submit {
+    min-height: 62px;
+    font-size: 18px;
+  }
+
+  .login-error {
+    font-size: 15px;
+  }
+
+  .tab {
+    font-size: 16px;
+    font-weight: 700;
+    padding: 12px 3px 14px;
+    min-height: 66px;
+  }
+
+  .tab .ico {
+    font-size: 25px;
+  }
+}
+
+/* Mobile login: original photo + glassmorphism */
+@media (max-width: 850px) {
+  .login-page {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100svh;
+    padding: 28px 18px;
+    background:
+      linear-gradient(rgba(3, 24, 17, .48), rgba(3, 24, 17, .78)),
+      url('./assets/lepro-login-photo.jpg') center / cover no-repeat;
+  }
+
+  .login-panel {
+    width: 100%;
+    min-height: auto;
+    padding: 0;
+    background: transparent;
+  }
+
+  .login-form-wrap {
+    max-width: 460px;
+    padding: 30px 24px;
+    border: 1px solid rgba(255, 255, 255, .22);
+    border-radius: 24px;
+    background: rgba(10, 43, 31, .58);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, .3);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+  }
+
+  .login-mobile-brand {
+    color: #fff;
+    margin-bottom: 32px;
+  }
+
+  .login-heading h2,
+  .login-form label {
+    color: #fff;
+  }
+
+  .login-heading p {
+    color: rgba(255, 255, 255, .78);
+  }
+
+  .login-input-wrap {
+    border: 1px solid rgba(255, 255, 255, .25);
+    background: rgba(255, 255, 255, .12);
+  }
+
+  .login-input-icon,
+  .login-show-password {
+    color: rgba(255, 255, 255, .75);
+  }
+
+  .login-input-wrap input {
+    color: #fff;
+  }
+
+  .login-input-wrap input::placeholder {
+    color: rgba(255, 255, 255, .58);
+  }
+
+  .login-password-label a,
+  .login-signup a {
+    color: #f1c75b;
+  }
+
+  .login-signup {
+    color: rgba(255, 255, 255, .78);
+  }
+
+  .login-footnote {
+    border-color: rgba(255, 255, 255, .2);
+    color: rgba(255, 255, 255, .65);
+  }
+}
+
+
+/* Reveal more of the football background */
+@media (max-width: 850px) {
+  .login-page {
+    background:
+      linear-gradient(rgba(3, 24, 17, .18), rgba(3, 24, 17, .38)),
+      url('./assets/lepro-login-photo.jpg') center / cover no-repeat;
+  }
+
+  .login-form-wrap {
+    background: rgba(10, 43, 31, .38);
+    border-color: rgba(255, 255, 255, .3);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+}
+
+/* Stronger photo visibility */
+@media (max-width: 850px) {
+  .login-page {
+    background:
+      linear-gradient(rgba(3, 24, 17, .08), rgba(3, 24, 17, .18)),
+      url('./assets/lepro-login-photo.jpg') center / cover no-repeat;
+  }
+
+  .login-form-wrap {
+    background: rgba(10, 43, 31, .24);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    border-color: rgba(255, 255, 255, .35);
+  }
+}
+
+/* Improve mobile login heading visibility */
+@media (max-width: 850px) {
+  .login-heading h2 {
+    color: #ffffff;
+    font-size: clamp(36px, 9vw, 46px);
+    font-weight: 800;
+    line-height: 1.1;
+    text-shadow: 0 2px 12px rgba(0, 0, 0, .65);
+    letter-spacing: .01em;
+  }
+
+  .login-heading .login-kicker {
+    color: #ffd76a;
+    text-shadow: 0 1px 6px rgba(0, 0, 0, .7);
+  }
+}
+
+/* Make WELCOME BACK clearly visible on mobile */
+@media (max-width: 850px) {
+  .login-heading > .login-kicker {
+    display: inline-block;
+    color: #ffd65a !important;
+    font-size: 16px !important;
+    font-weight: 900 !important;
+    letter-spacing: .16em;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, .9);
+    margin-bottom: 12px;
+  }
+}
