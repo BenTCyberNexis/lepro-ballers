@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react'
 import { supabase } from './supabaseClient'
 import { formatMatchDate } from './dateUtils'
 import MatchDetails from './MatchDetails'
+import Avatar from './Avatar'
+import { avatarUrl } from './avatar'
+import PhotoLightbox from './PhotoLightbox'
 
 const CATS = [
   ['passing', 'Passing'],
@@ -21,6 +24,8 @@ export default function Scores({ userId, show }) {
   const [error, setError] = useState('')
   const [selectedMatchId, setSelectedMatchId] = useState(null)
   const [selectedPlayerId, setSelectedPlayerId] = useState(null)
+  const [avatars, setAvatars] = useState({})
+  const [viewPhoto, setViewPhoto] = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -33,6 +38,9 @@ export default function Scores({ userId, show }) {
         return
       }
       setStats(s || [])
+
+      const { data: pl } = await supabase.from('players').select('id, avatar_path')
+      setAvatars(Object.fromEntries((pl || []).map((x) => [x.id, x.avatar_path])))
 
       const { data: h } = await supabase
         .from('match_scores')
@@ -109,6 +117,15 @@ export default function Scores({ userId, show }) {
   const activePlayerId = selectedPlayerId || userId
   const mine = stats.find((s) => s.player_id === activePlayerId)
   const num = (v) => Math.round(Number(v))
+  const photoUrl = avatarUrl(avatars[activePlayerId])
+  const lightbox =
+    viewPhoto && photoUrl ? (
+      <PhotoLightbox
+        url={photoUrl}
+        name={mine?.name || 'Player'}
+        onClose={() => setViewPhoto(false)}
+      />
+    ) : null
   const noRating = (
     <p className="muted">
       No rating yet. Your card appears once enough players have rated you.
@@ -157,6 +174,14 @@ export default function Scores({ userId, show }) {
   }
 
   if (show === 'card') {
+    const short = {
+      passing: 'PAS',
+      shooting: 'SHO',
+      defending: 'DEF',
+      dribbling: 'DRI',
+      work_rate: 'WRK',
+      teamwork: 'TEA',
+    }
     return (
       <div className="section">
         <h2>My card</h2>
@@ -164,56 +189,60 @@ export default function Scores({ userId, show }) {
         {!mine ? (
           noRating
         ) : (
-          <div className="fut-card">
-            <div className="fut-top">
-              <div className="fut-ovr">{num(mine.overall)}</div>
-              <div>
-                <div className="fut-name">{mine.name}</div>
-                <div className="muted">
-                  Based on {mine.matches_rated} match{mine.matches_rated > 1 ? 'es' : ''}
+          <div className="fut-wrap">
+            <div className="fut">
+              <div className="fut-main">
+                <div className="fut-left">
+                  <div className="fut-rating">{num(mine.overall)}</div>
+                  <div className="fut-pos">OVR</div>
+                  <div className="fut-sep" />
+                  <div className="fut-ball">⚽</div>
                 </div>
-              </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '12px 0' }}>
-              <strong style={{ fontSize: '12px' }}>FORM</strong>
-              {lastFive.map((r) => (
-                <span
-                  key={r.match_id}
-                  title={`${formatMatchDate(r.match?.match_date) || 'Match'}: ${r.form}`}
-                  style={{
-                    width: '28px',
-                    height: '28px',
-                    borderRadius: '50%',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: '700',
-                    color: '#fff',
-                    backgroundColor:
-                      r.form === 'W'
-                        ? '#16a34a'
-                        : r.form === 'D'
-                          ? '#2563eb'
-                          : '#dc2626',
-                  }}
-                >
-                  {r.form}
-                </span>
-              ))}
-            </div>
-            <div className="fut-stats">
-              {CATS.map(([key, label]) => (
-                <div className="fut-stat" key={key}>
-                  <span className="fut-val">{num(mine[key])}</span>
-                  <span className="fut-lab">{label}</span>
-                  <div className="bar">
-                    <div className="bar-fill" style={{ width: Number(mine[key]) + '%' }} />
+                {photoUrl ? (
+                  <button
+                    type="button"
+                    className="fut-photo"
+                    onClick={() => setViewPhoto(true)}
+                    aria-label="View full photo"
+                  >
+                    <img src={photoUrl} alt={mine.name} />
+                  </button>
+                ) : (
+                  <div className="fut-photo fut-photo-empty">
+                    <Avatar path={null} name={mine.name} size={110} />
                   </div>
+                )}
+              </div>
+              <div className="fut-nameplate">{mine.name}</div>
+              <div className="fut-stats2">
+                {CATS.map(([key]) => (
+                  <div className="fut-s" key={key}>
+                    <b>{num(mine[key])}</b>
+                    <span>{short[key]}</span>
+                  </div>
+                ))}
+              </div>
+              {lastFive.length > 0 && (
+                <div className="fut-form">
+                  <span>FORM</span>
+                  {lastFive.map((r) => (
+                    <span
+                      key={r.match_id}
+                      className={'fut-chip ' + r.form}
+                      title={(formatMatchDate(r.match?.match_date) || 'Match') + ': ' + r.form}
+                    >
+                      {r.form}
+                    </span>
+                  ))}
                 </div>
-              ))}
+              )}
+              <div className="fut-sub">
+                Based on {mine.matches_rated} match{mine.matches_rated > 1 ? 'es' : ''}
+              </div>
             </div>
           </div>
         )}
+        {lightbox}
       </div>
     )
   }
@@ -370,6 +399,7 @@ export default function Scores({ userId, show }) {
         </>
       )}
 
+      {lightbox}
       {selectedMatchId && (
         <MatchDetails
           matchId={selectedMatchId}

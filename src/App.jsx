@@ -4,6 +4,8 @@ import Login from './Login'
 import Signup from './Signup'
 import ForgotPassword from './ForgotPassword'
 import ChangePassword from './ChangePassword'
+import ChangePhoto from './ChangePhoto'
+import Avatar from './Avatar'
 import LastMatch from './LastMatch'
 import Rate from './Rate'
 import Scores from './Scores'
@@ -25,6 +27,7 @@ export default function App() {
   const [checking, setChecking] = useState(true)
   const [fetching, setFetching] = useState(false)
   const [changing, setChanging] = useState(false)
+  const [changingPhoto, setChangingPhoto] = useState(false)
   const [tab, setTab] = useState('home')
   const [route, setRoute] = useState(window.location.hash)
   const [accountOpen, setAccountOpen] = useState(false)
@@ -70,7 +73,7 @@ export default function App() {
     setFetching(true)
     supabase
       .from('players')
-      .select('name, username, role, status, must_change_password')
+      .select('name, username, role, status, must_change_password, avatar_path')
       .eq('id', session.user.id)
       .maybeSingle()
       .then(({ data, error }) => {
@@ -115,6 +118,21 @@ export default function App() {
     )
   }
 
+  if (changingPhoto) {
+    return (
+      <ChangePhoto
+        userId={session.user.id}
+        name={player.name}
+        currentPath={player.avatar_path}
+        onCancel={() => setChangingPhoto(false)}
+        onDone={() => {
+          setChangingPhoto(false)
+          setSession({ ...session })
+        }}
+      />
+    )
+  }
+
   if (player.status === 'pending') {
     return (
       <div className="card">
@@ -141,10 +159,16 @@ export default function App() {
             className="who account-trigger"
             onClick={() => setAccountOpen(!accountOpen)}
           >
-            {player.name} <span>▾</span>
+            <Avatar path={player.avatar_path} name={player.name} size={28} /> {player.name} <span>▾</span>
           </button>
           {accountOpen && (
             <div className="account-menu">
+              <button type="button" onClick={() => {
+                setAccountOpen(false)
+                setChangingPhoto(true)
+              }}>
+                📷 Change profile picture
+              </button>
               <button type="button" onClick={() => {
                 setAccountOpen(false)
                 setChanging(true)

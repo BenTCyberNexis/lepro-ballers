@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { supabase, toEmail } from './supabaseClient'
+import AvatarPicker from './AvatarPicker'
+import { compressImage, uploadAvatarBlob } from './avatar'
 
 export default function Signup() {
   const [name, setName] = useState('')
@@ -7,6 +9,7 @@ export default function Signup() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [photo, setPhoto] = useState(null)
 
   async function handleSignup(e) {
     e.preventDefault()
@@ -19,6 +22,18 @@ export default function Signup() {
     }
     if (password.length < 6) {
       setError('Password must be at least 6 characters')
+      return
+    }
+
+    if (!photo) {
+      setError('Add a profile photo')
+      return
+    }
+    let photoBlob
+    try {
+      photoBlob = await compressImage(photo)
+    } catch (err) {
+      setError(err.message || 'Could not use that photo')
       return
     }
 
@@ -55,6 +70,12 @@ export default function Signup() {
       return
     }
 
+    try {
+      await uploadAvatarBlob(data.user.id, photoBlob)
+    } catch (_) {
+      // The account exists; the photo can be added later from the account menu
+    }
+
     // Reload without the #/signup part so the waiting screen shows
     window.location.href = window.location.pathname
   }
@@ -84,6 +105,7 @@ export default function Signup() {
           onChange={(e) => setPassword(e.target.value)}
           required
         />
+        <AvatarPicker file={photo} onChange={setPhoto} label="Add your photo" />
         {error && <p className="error">{error}</p>}
         <button disabled={loading}>{loading ? 'Submitting...' : 'Submit'}</button>
       </form>
