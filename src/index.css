@@ -1190,3 +1190,95 @@ body:has(.login-page) #root { min-height: 100vh; }
 
 /* Ratings details page: old header */
 .detail-top .detail-ovr { margin-left: 0; }
+.detail-top .detail-ovr { margin-left: 0; }
+
+/* Card: dark green rectangle with gold rating lines under the photo and OVR */
+.fut-panel {
+  position: relative;
+  margin: 12px 0 4px;
+  padding: 14px 14px 12px;
+  border-radius: 12px;
+  color: #fff;
+  border: 2px solid rgba(58, 42, 6, 0.55);
+  background: repeating-linear-gradient(90deg, #0F3D2E 0 36px, #0C3326 36px 72px);
+}
+.fut-panel .fut-stats { margin-top: 0; padding-top: 0; border-top: 0; }
+.detail-top .detail-ovr { margin-left: auto; }
+
+/* Card: rectangle instead of the pointed shield shape */
+.fut {
+  clip-path: none;
+  border-radius: 18px;
+  padding: 22px 20px 18px;
+  border: 2px solid rgba(58, 42, 6, 0.45);
+}
+
+/* Card: bigger, easier to read form and match count */
+.fut-form { gap: 10px; margin-top: 14px; font-size: 15px; letter-spacing: 0.5px; }
+.fut-form > span:first-child { margin-right: 6px; font-family: var(--display, sans-serif); font-size: 20px; font-weight: 700; }
+.fut-chip { width: 36px; height: 36px; font-size: 16px; }
+.fut-sub { margin-top: 12px; font-size: 16px; font-weight: 600; opacity: 0.9; }
+
+/* My card: bigger text, same card size */
+.section > h2:first-child { font-size: 28px; }
+.fut-pos { font-size: 28px; }
+.fut-nameplate { font-size: 36px; line-height: 1.05; overflow-wrap: anywhere; }
+.fut-panel .fut-val { font-size: 36px; }
+.fut-panel .fut-lab { font-size: 16px; font-weight: 500; }
+
+/* My card: shorter, same readable text */
+.fut { padding: 16px 18px 14px; }
+.fut-photo { width: 46%; aspect-ratio: 1 / 1; }
+.fut-left { width: 50%; padding-bottom: 6px; }
+.fut-rating { font-size: 64px; }
+.fut-sep { margin: 4px 0; }
+.fut-ball { display: none; }
+.fut-nameplate { margin-top: 8px; padding-bottom: 4px; font-size: 32px; }
+.fut-panel { margin: 8px 0 2px; padding: 10px 12px; }
+.fut-panel .fut-stats { gap: 8px 12px; }
+.fut-panel .fut-val { font-size: 32px; }
+.fut-panel .bar { margin-top: 3px; }
+.fut-form { margin-top: 8px; }
+.fut-chip { width: 32px; height: 32px; font-size: 15px; }
+.fut-sub { margin-top: 6px; font-size: 15px; }
+
+/* Interactive ratings on the card */
+.fut-stat-btn { background: transparent; padding: 6px 4px; border: 0; border-radius: 8px; color: inherit; font: inherit; font-weight: normal; text-align: left; width: 100%; cursor: pointer; }
+.fut-stat-btn:hover { background: rgba(255, 255, 255, 0.1); }
+.fut-stat-btn.active { background: rgba(245, 179, 1, 0.2); box-shadow: inset 0 0 0 1px rgba(245, 179, 1, 0.7); }
+.fut-stat-btn .bar { display: block; }
+.fut-stat-btn .bar-fill { display: block; }
+
+.fut-info { margin-top: 10px; padding: 10px 12px; border-radius: 10px; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(245, 179, 1, 0.5); font-size: 14px; }
+.fut-info-top { display: flex; justify-content: space-between; align-items: baseline; font-family: var(--display, sans-serif); font-size: 20px; }
+.fut-info-top span { color: var(--gold, #F5B301); font-size: 16px; }
+.fut-info p { margin: 4px 0; }
+.fut-info-line { color: #cfe3d6; }
+
+/* Interactive OVR number and form circles */
+.fut-ovr-btn { background: transparent; border: 0; padding: 2px 8px; margin: -2px -8px; border-radius: 12px; color: inherit; font: inherit; font-weight: normal; text-align: right; cursor: pointer; }
+.fut-ovr-btn:hover { background: rgba(255, 255, 255, 0.28); }
+.fut-ovr-btn.active { background: rgba(15, 61, 46, 0.2); box-shadow: inset 0 0 0 2px rgba(15, 61, 46, 0.5); }
+.fut-ovr-btn span { display: block; }
+.fut-chip { padding: 0; border: 0; cursor: pointer; transition: transform 0.12s; }
+.fut-chip:hover { transform: scale(1.12); }
+.fut-chip.active { box-shadow: 0 0 0 3px #0F3D2E; }
+.fut-info-card { position: relative; background: #0F3D2E; color: #fff; margin-top: 10px; border-color: rgba(245, 179, 1, 0.7); }
+
+/* Goals and assists on the card */
+.fut-gs { position: relative; display: flex; gap: 10px; justify-content: center; align-items: center; margin-top: 10px; }
+.fut-gs-btn { display: inline-flex; gap: 6px; align-items: baseline; padding: 6px 14px; border-radius: 999px; background: rgba(15, 61, 46, 0.12); border: 1.5px solid rgba(58, 42, 6, 0.4); color: #3a2a06; font: inherit; font-weight: 600; font-size: 15px; cursor: pointer; }
+.fut-gs-btn b { font-family: var(--display, sans-serif); font-size: 24px; line-height: 1; }
+.fut-gs-btn:hover { background: rgba(15, 61, 46, 0.25); color: #3a2a06; }
+.fut-gs-btn.active, .fut-gs-btn.active:hover { background: #0F3D2E; color: #fff; border-color: #0F3D2E; }
+.fut-gs-year { font-size: 13px; font-weight: 600; opacity: 0.7; }
+.fut-a { font-family: var(--display, sans-serif); font-weight: 700; font-size: 22px; line-height: 1; }
+
+/* No line under the name */
+.fut-nameplate { border-bottom: 0; }
+
+/* Goals and assists joined into one pill */
+.fut-gs { gap: 0; }
+.fut-gs-btn { border-radius: 0; padding: 6px 18px; }
+.fut-gs-btn:first-child { border-radius: 999px 0 0 999px; border-right-width: 0; }
+.fut-gs-btn:last-child { border-radius: 0 999px 999px 0; }

@@ -26,6 +26,12 @@ export default function Scores({ userId, show }) {
   const [selectedPlayerId, setSelectedPlayerId] = useState(null)
   const [avatars, setAvatars] = useState({})
   const [viewPhoto, setViewPhoto] = useState(false)
+  const [pinnedStat, setPinnedStat] = useState(null)
+  const [hoverStat, setHoverStat] = useState(null)
+  const [pinnedExtra, setPinnedExtra] = useState(null)
+  const [hoverExtra, setHoverExtra] = useState(null)
+  const [goalStats, setGoalStats] = useState([])
+  const [appearances, setAppearances] = useState(0)
 
   useEffect(() => {
     async function load() {
@@ -41,6 +47,18 @@ export default function Scores({ userId, show }) {
 
       const { data: pl } = await supabase.from('players').select('id, avatar_path')
       setAvatars(Object.fromEntries((pl || []).map((x) => [x.id, x.avatar_path])))
+
+      const target = selectedPlayerId || userId
+      const { data: gs } = await supabase
+        .from('goal_stats')
+        .select('year, goals, assists')
+        .eq('player_id', target)
+      setGoalStats(gs || [])
+      const { count } = await supabase
+        .from('match_players')
+        .select('match_id', { count: 'exact', head: true })
+        .eq('player_id', target)
+      setAppearances(count || 0)
 
       const { data: h } = await supabase
         .from('match_scores')
@@ -174,6 +192,34 @@ export default function Scores({ userId, show }) {
   }
 
   if (show === 'card') {
+    const WORDS = ['Bad', 'Needs improvement', 'Average', 'Good', 'Excellent']
+    const HELP = {
+      passing: 'How well you move the ball to your teammates.',
+      shooting: 'Your finishing and the quality of your shots.',
+      defending: 'Tackling, marking and winning the ball back.',
+      dribbling: 'Ball control and beating players one on one.',
+      work_rate: 'Effort, running and how hard you work for the team.',
+      teamwork: 'Playing for the team: communication and support.',
+    }
+    const canHover =
+      typeof window !== 'undefined' &&
+      window.matchMedia &&
+      window.matchMedia('(hover: hover)').matches
+    const activeStat = hoverStat || pinnedStat
+    const extraKey = hoverExtra || pinnedExtra
+    const thisYear = new Date().getFullYear()
+    const yr = goalStats.find((g) => g.year === thisYear)
+    const goalsYear = yr ? Number(yr.goals) : 0
+    const assistsYear = yr ? Number(yr.assists) : 0
+
+    function statInfo(key) {
+      const vals = history
+        .map((r) => ({ v: Number(r[key]), date: r.match?.match_date }))
+        .filter((x) => !Number.isNaN(x.v))
+      const best = vals.length ? vals.reduce((a, b) => (b.v > a.v ? b : a), vals[0]) : null
+      const idx = Math.min(4, Math.max(0, Math.round(Number(mine?.[key]) / 20) - 1))
+      return { latest: vals[0], prev: vals[1], best, word: WORDS[idx] }
+    }
     const short = {
       passing: 'PAS',
       shooting: 'SHO',
@@ -193,8 +239,18 @@ export default function Scores({ userId, show }) {
             <div className="fut">
               <div className="fut-main">
                 <div className="fut-left">
-                  <div className="fut-rating">{num(mine.overall)}</div>
-                  <div className="fut-pos">OVR</div>
+                  <button
+                    type="button"
+                    className={'fut-ovr-btn' + (extraKey === 'ovr' ? ' active' : '')}
+                    title="Overall rating (tap for details)"
+                    aria-expanded={extraKey === 'ovr'}
+                    onMouseEnter={() => canHover && setHoverExtra('ovr')}
+                    onMouseLeave={() => setHoverExtra(null)}
+                    onClick={() => setPinnedExtra(pinnedExtra === 'ovr' ? null : 'ovr')}
+                  >
+                    <span className="fut-rating">{num(mine.overall)}</span>
+                    <span className="fut-pos">OVR</span>
+                  </button>
                   <div className="fut-sep" />
                   <div className="fut-ball">⚽</div>
                 </div>
@@ -214,28 +270,187 @@ export default function Scores({ userId, show }) {
                 )}
               </div>
               <div className="fut-nameplate">{mine.name}</div>
-              <div className="fut-stats2">
-                {CATS.map(([key]) => (
-                  <div className="fut-s" key={key}>
-                    <b>{num(mine[key])}</b>
-                    <span>{short[key]}</span>
-                  </div>
-                ))}
+              <div className="fut-gs" onMouseLeave={() => setHoverExtra(null)}>
+                <button
+                  type="button"
+                  className={'fut-gs-btn' + (extraKey === 'goals' ? ' active' : '')}
+                  title="Goals this year (tap for details)"
+                  onMouseEnter={() => canHover && setHoverExtra('goals')}
+                  onClick={() => setPinnedExtra(pinnedExtra === 'goals' ? null : 'goals')}
+                >
+                  ⚽ <b>{goalsYear}</b>
+                </button>
+                <button
+                  type="button"
+                  className={'fut-gs-btn' + (extraKey === 'assists' ? ' active' : '')}
+                  title="Assists this year (tap for details)"
+                  onMouseEnter={() => canHover && setHoverExtra('assists')}
+                  onClick={() => setPinnedExtra(pinnedExtra === 'assists' ? null : 'assists')}
+                >
+                  🦵 <b>{assistsYear}</b>
+                </button>
+                
+              </div>
+              <div className="fut-panel" onMouseLeave={() => setHoverStat(null)}>
+                <div className="fut-stats">
+                  {CATS.map(([key, label]) => (
+                    <button
+                      type="button"
+                      key={key}
+                      className={'fut-stat fut-stat-btn' + (activeStat === key ? ' active' : '')}
+                      title={label + ': ' + num(mine[key]) + ' (tap for details)'}
+                      aria-expanded={activeStat === key}
+                      onMouseEnter={() => canHover && setHoverStat(key)}
+                      onClick={() => setPinnedStat(pinnedStat === key ? null : key)}
+                    >
+                      <span className="fut-val">{num(mine[key])}</span>
+                      <span className="fut-lab">{label}</span>
+                      <span className="bar">
+                        <span className="bar-fill" style={{ width: Number(mine[key]) + '%' }} />
+                      </span>
+                    </button>
+                  ))}
+                </div>
+                {activeStat &&
+                  (() => {
+                    const info = statInfo(activeStat)
+                    const label = CATS.find(([k]) => k === activeStat)[1]
+                    const diff =
+                      info.latest && info.prev ? Math.round(info.latest.v - info.prev.v) : null
+                    return (
+                      <div className="fut-info" role="status">
+                        <div className="fut-info-top">
+                          <strong>
+                            {label} · {num(mine[activeStat])}
+                          </strong>
+                          <span>{info.word}</span>
+                        </div>
+                        <p>{HELP[activeStat]}</p>
+                        <p className="fut-info-line">
+                          {info.latest ? 'Last match: ' + num(info.latest.v) : ''}
+                          {diff !== null
+                            ? diff > 0
+                              ? ' ▲ +' + diff
+                              : diff < 0
+                                ? ' ▼ ' + diff
+                                : ' ▬ no change'
+                            : ''}
+                          {info.best
+                            ? ' · Best: ' +
+                              num(info.best.v) +
+                              (info.best.date ? ' (' + formatMatchDate(info.best.date) + ')' : '')
+                            : ''}
+                        </p>
+                      </div>
+                    )
+                  })()}
               </div>
               {lastFive.length > 0 && (
                 <div className="fut-form">
                   <span>FORM</span>
                   {lastFive.map((r) => (
-                    <span
+                    <button
+                      type="button"
                       key={r.match_id}
-                      className={'fut-chip ' + r.form}
+                      className={'fut-chip ' + r.form + (extraKey === 'form:' + r.match_id ? ' active' : '')}
                       title={(formatMatchDate(r.match?.match_date) || 'Match') + ': ' + r.form}
+                      onMouseEnter={() => canHover && setHoverExtra('form:' + r.match_id)}
+                      onMouseLeave={() => setHoverExtra(null)}
+                      onClick={() =>
+                        setPinnedExtra(
+                          pinnedExtra === 'form:' + r.match_id ? null : 'form:' + r.match_id
+                        )
+                      }
                     >
                       {r.form}
-                    </span>
+                    </button>
                   ))}
                 </div>
               )}
+              {extraKey &&
+                (() => {
+                  if (extraKey === 'ovr') {
+                    const rank = stats.findIndex((x) => x.player_id === mine.player_id) + 1
+                    const latest = history[0]
+                    const prev = history[1]
+                    const diff =
+                      latest && prev ? Math.round(Number(latest.overall) - Number(prev.overall)) : null
+                    const top = [...CATS]
+                      .map(([k, l]) => ({ l, v: Number(mine[k]) }))
+                      .sort((a, b) => b.v - a.v)[0]
+                    return (
+                      <div className="fut-info fut-info-card" role="status">
+                        <div className="fut-info-top">
+                          <strong>Overall {num(mine.overall)}</strong>
+                          <span>
+                            #{rank} of {stats.length}
+                          </span>
+                        </div>
+                        <p>
+                          The average of every rating players gave you across {mine.matches_rated} match
+                          {mine.matches_rated > 1 ? 'es' : ''}. Excellent in everything would be 100.
+                        </p>
+                        <p className="fut-info-line">
+                          {latest ? 'Last match: ' + num(latest.overall) : ''}
+                          {diff !== null
+                            ? diff > 0
+                              ? ' ▲ +' + diff
+                              : diff < 0
+                                ? ' ▼ ' + diff
+                                : ' ▬ no change'
+                            : ''}
+                          {top ? ' · Strongest: ' + top.l : ''}
+                        </p>
+                      </div>
+                    )
+                  }
+                  if (extraKey === 'goals' || extraKey === 'assists') {
+                    const isGoals = extraKey === 'goals'
+                    const key = isGoals ? 'goals' : 'assists'
+                    const allVal = goalStats.reduce((t, g) => t + Number(g[key]), 0)
+                    const per = appearances ? (allVal / appearances).toFixed(2) : null
+                    const earlier = goalStats
+                      .filter((g) => g.year !== thisYear)
+                      .sort((a, b) => b.year - a.year)
+                    return (
+                      <div className="fut-info fut-info-card" role="status">
+                        <div className="fut-info-top">
+                          <strong>{isGoals ? 'Goals' : 'Assists'}</strong>
+                          <span>
+                            {thisYear}: {isGoals ? goalsYear : assistsYear}
+                          </span>
+                        </div>
+                        <p>
+                          All time: {allVal}
+                          {appearances
+                            ? ' in ' + appearances + ' match' + (appearances > 1 ? 'es' : '')
+                            : ''}
+                        </p>
+                        <p className="fut-info-line">
+                          {per !== null ? per + ' per match' : ''}
+                          {earlier.map((g) => ' · ' + g.year + ': ' + Number(g[key])).join('')}
+                        </p>
+                      </div>
+                    )
+                  }
+                  const r = lastFive.find((x) => 'form:' + x.match_id === extraKey)
+                  if (!r) return null
+                  return (
+                    <div className="fut-info fut-info-card" role="status">
+                      <div className="fut-info-top">
+                        <strong>{r.form === 'W' ? 'Win' : r.form === 'D' ? 'Draw' : 'Loss'}</strong>
+                        <span>{formatMatchDate(r.match?.match_date)}</span>
+                      </div>
+                      <p>
+                        Team A {r.result.teamA} – {r.result.teamB} Team B
+                        {r.match?.venue ? ' · ' + r.match.venue : ''}
+                      </p>
+                      <p className="fut-info-line">
+                        You played for Team {r.myTeam} · Your rating that match: {num(r.overall)}
+                      </p>
+                    </div>
+                  )
+                })()}
               <div className="fut-sub">
                 Based on {mine.matches_rated} match{mine.matches_rated > 1 ? 'es' : ''}
               </div>
@@ -275,7 +490,18 @@ export default function Scores({ userId, show }) {
       ) : (
         <>
           <div className="detail-top">
-            <div className="detail-ovr">{num(mine.overall)}</div>
+            {photoUrl ? (
+              <button
+                type="button"
+                className="photo-btn"
+                onClick={() => setViewPhoto(true)}
+                aria-label="View full photo"
+              >
+                <Avatar path={avatars[mine.player_id]} name={mine.name} size={64} />
+              </button>
+            ) : (
+              <Avatar path={avatars[mine.player_id]} name={mine.name} size={64} />
+            )}
             <div>
               <div className="detail-label">Overall</div>
               <div className="muted">
@@ -283,6 +509,7 @@ export default function Scores({ userId, show }) {
                 {mine.matches_rated > 1 ? 'es' : ''}
               </div>
             </div>
+            <div className="detail-ovr">{num(mine.overall)}</div>
           </div>
 
           <div style={{ margin: '20px 0' }}>
