@@ -1020,3 +1020,46 @@ body:has(.login-page) #root { min-height: 100vh; }
     background: rgba(4, 25, 18, .90) !important;
   }
 }
+
+/* Show LEPRO BALLERS branding on desktop and mobile */
+.login-mobile-brand {
+  display: flex !important;
+  align-items: center;
+  gap: 13px;
+  color: #fff !important;
+  font-size: 28px !important;
+  font-weight: 900 !important;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, .75);
+  margin-bottom: 30px !important;
+}
+
+.login-mobile-brand > span:last-child {
+  color: #fff !important;
+}
+
+.login-mobile-brand b {
+  color: #ffd65a !important;
+}
+
+.login-mobile-brand .login-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  border-radius: 13px;
+  background: linear-gradient(135deg, #f4c542, #d99a16);
+  color: #102b20 !important;
+  font-size: 19px;
+  font-weight: 900;
+  letter-spacing: -1px;
+  text-shadow: none;
+}
+
+@media (max-width: 480px) {
+  .login-mobile-brand {
+    font-size: 23px !important;
+  }
+}
