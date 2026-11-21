@@ -84,13 +84,27 @@ export default function App() {
       })
   }, [session])
 
-  if (checking) return <div className="card">Loading...</div>
+  if (checking) return <div className="loading-screen">
+      <div className="loading-content">
+        <div className="loading-ball">⚽</div>
+        <div className="loading-brand">LEPRO <span>BALLERS</span></div>
+        <p>Getting your game ready...</p>
+        <div className="loading-track"><span /></div>
+      </div>
+    </div>
   if (!session) {
     if (route === '#/signup') return <Signup />
     if (route === '#/forgot') return <ForgotPassword />
     return <Login />
   }
-  if (fetching) return <div className="card">Loading...</div>
+  if (fetching) return <div className="loading-screen">
+      <div className="loading-content">
+        <div className="loading-ball">⚽</div>
+        <div className="loading-brand">LEPRO <span>BALLERS</span></div>
+        <p>Getting your game ready...</p>
+        <div className="loading-track"><span /></div>
+      </div>
+    </div>
 
   if (!player) {
     if (route === '#/signup') return <Signup />
@@ -151,7 +165,14 @@ export default function App() {
   const active = tabs.some((t) => t[0] === tab) ? tab : 'home'
 
   return (
-    <Suspense fallback={<div className="card">Loading...</div>}>
+    <Suspense fallback={<div className="loading-screen">
+      <div className="loading-content">
+        <div className="loading-ball">⚽</div>
+        <div className="loading-brand">LEPRO <span>BALLERS</span></div>
+        <p>Getting your game ready...</p>
+        <div className="loading-track"><span /></div>
+      </div>
+    </div>}>
       <div className="app">
       <header className="topbar">
         <span className="brand">⚽ Lepro Ballers</span>

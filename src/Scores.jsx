@@ -21,6 +21,7 @@ const CATS = [
 export default function Scores({ userId, show }) {
   const [stats, setStats] = useState([])
   const [history, setHistory] = useState([])
+  const [formHistory, setFormHistory] = useState([])
   const [error, setError] = useState('')
   const [selectedMatchId, setSelectedMatchId] = useState(null)
   const [selectedPlayerId, setSelectedPlayerId] = useState(null)
@@ -60,15 +61,23 @@ export default function Scores({ userId, show }) {
         .eq('player_id', target)
       setAppearances(count || 0)
 
+      const targetId = selectedPlayerId || userId
+
+      const { data: participation } = await supabase
+        .from('match_players')
+        .select('match_id, player_id, team')
+        .eq('player_id', targetId)
+
       const { data: h } = await supabase
         .from('match_scores')
         .select('*')
-        .eq('player_id', selectedPlayerId || userId)
+        .eq('player_id', targetId)
+
       const { data: m } = await supabase
         .from('matches')
         .select('id, match_date, venue, result_entered')
 
-      const matchIds = (h || []).map((r) => r.match_id)
+      const matchIds = [...new Set((participation || []).map((r) => r.match_id))]
 
       const { data: squads } = matchIds.length
         ? await supabase
@@ -123,7 +132,22 @@ export default function Scores({ userId, show }) {
             myTeam: myTeams[r.match_id],
           }))
           .sort((a, b) =>
-            (b.match?.match_date || '').localeCompare(a.match?.match_date || '')
+            (b.match?.match_date || '').localeCompare(a.match?.match_date || '') ||
+            Number(b.match?.id || 0) - Number(a.match?.id || 0)
+          )
+      )
+
+      setFormHistory(
+        (participation || [])
+          .map((r) => ({
+            ...r,
+            match: byId[r.match_id],
+            result: results[r.match_id],
+            myTeam: r.team,
+          }))
+          .sort((a, b) =>
+            (b.match?.match_date || '').localeCompare(a.match?.match_date || '') ||
+            Number(b.match?.id || 0) - Number(a.match?.id || 0)
           )
       )
     }
@@ -150,7 +174,7 @@ export default function Scores({ userId, show }) {
     </p>
   )
 
-  const lastFive = history
+  const lastFive = formHistory
     .filter((r) => r.result?.hasResult && r.myTeam)
     .slice(0, 5)
     .reverse()
@@ -239,6 +263,24 @@ export default function Scores({ userId, show }) {
           <div className="fut-wrap">
             <div className="fut">
               <div className="fut-main">
+                <div className="fut-portrait">
+                  {photoUrl ? (
+                    <button
+                      type="button"
+                      className="fut-photo"
+                      onClick={() => setViewPhoto(true)}
+                      aria-label="View full photo"
+                    >
+                      <img src={photoUrl} alt={mine.name} />
+                    </button>
+                  ) : (
+                    <div className="fut-photo fut-photo-empty">
+                      <Avatar path={null} name={mine.name} size={110} />
+                    </div>
+                  )}
+                  <div className="fut-nameplate">{mine.name}</div>
+                </div>
+              <div className="fut-top-stats">
                 <div className="fut-left">
                   <button
                     type="button"
@@ -255,22 +297,6 @@ export default function Scores({ userId, show }) {
                   <div className="fut-sep" />
                   <div className="fut-ball">⚽</div>
                 </div>
-                {photoUrl ? (
-                  <button
-                    type="button"
-                    className="fut-photo"
-                    onClick={() => setViewPhoto(true)}
-                    aria-label="View full photo"
-                  >
-                    <img src={photoUrl} alt={mine.name} />
-                  </button>
-                ) : (
-                  <div className="fut-photo fut-photo-empty">
-                    <Avatar path={null} name={mine.name} size={110} />
-                  </div>
-                )}
-              </div>
-              <div className="fut-nameplate">{mine.name}</div>
               <div className="fut-gs-form">
               <div className="fut-gs" onMouseLeave={() => setHoverExtra(null)}>
                 <button
@@ -318,6 +344,8 @@ export default function Scores({ userId, show }) {
               )}
               <div className="fut-sub">
                 Based on {mine.matches_rated} match{mine.matches_rated > 1 ? 'es' : ''}
+              </div>
+              </div>
               </div>
               </div>
               </div>

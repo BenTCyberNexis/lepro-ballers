@@ -64,6 +64,7 @@ export default function AdminMatches() {
       .from('matches')
       .select('id, match_date, venue, status, rating_closes_at, result_entered')
       .order('match_date', { ascending: false })
+      .order('id', { ascending: false })
 
     const matchList = m || []
 

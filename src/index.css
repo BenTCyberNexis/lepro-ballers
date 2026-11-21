@@ -1431,3 +1431,419 @@ body:has(.login-page) #root { min-height: 100vh; }
 .fut-gs-form .fut-form {
   gap: 3px;
 }
+
+/* Lepro Ballers branded loading screen */
+.loading-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background:
+    radial-gradient(circle at 50% 40%, rgba(25, 110, 70, .28), transparent 45%),
+    #071b14;
+  color: #fff;
+}
+
+.loading-content {
+  width: 100%;
+  max-width: 320px;
+  text-align: center;
+}
+
+.loading-ball {
+  font-size: 58px;
+  margin-bottom: 22px;
+  animation: loading-kick 1.5s ease-in-out infinite;
+}
+
+.loading-brand {
+  font-size: 27px;
+  font-weight: 900;
+  letter-spacing: 2px;
+}
+
+.loading-brand span {
+  color: #f4c542;
+}
+
+.loading-content p {
+  color: rgba(255, 255, 255, .72);
+  font-size: 14px;
+  margin: 12px 0 25px;
+}
+
+.loading-track {
+  height: 4px;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, .15);
+}
+
+.loading-track span {
+  display: block;
+  width: 35%;
+  height: 100%;
+  border-radius: inherit;
+  background: #f4c542;
+  animation: loading-progress 1.4s ease-in-out infinite;
+}
+
+@keyframes loading-kick {
+  0%, 100% { transform: translateY(0) rotate(0); }
+  50% { transform: translateY(-12px) rotate(20deg); }
+}
+
+@keyframes loading-progress {
+  0% { transform: translateX(-110%); }
+  100% { transform: translateX(310%); }
+}
+
+/* Home player card refinements */
+.fut-nameplate {
+  margin-top: 14px;
+  font-size: 26px;
+}
+
+.fut-photo img {
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+
+/* Shift OVR slightly left */
+.fut-left {
+  transform: translateX(-8px);
+}
+
+/* Shift OVR slightly left */
+.fut-left {
+  transform: translateX(-13px);
+}
+
+/* Shift OVR slightly left */
+.fut-left {
+  transform: translateX(-13px);
+}
+
+/* Shift OVR slightly left */
+.fut-left {
+  transform: translateX(-20px);
+}
+
+/* Shift OVR slightly left */
+.fut-left {
+  transform: translateX(-30px);
+}
+
+/* FIFA/PES-style player name beneath portrait */
+.fut-nameplate {
+  width: 46%;
+  margin-left: auto;
+  margin-right: 0;
+  margin-top: 4px;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+/* FIFA/PES portrait layout */
+.fut-portrait {
+  width: 46%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.fut-portrait .fut-photo {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  margin: 0;
+}
+
+.fut-portrait .fut-nameplate {
+  width: 100%;
+  margin: 4px 0 0;
+  padding: 0 2px;
+  font-size: 18px;
+  line-height: 1.15;
+  text-align: center;
+  overflow-wrap: anywhere;
+  box-sizing: border-box;
+}
+
+/* Enlarge player portrait */
+.fut-portrait {
+  width: 55%;
+}
+
+/* Compact FIFA-style top statistics row */
+.fut-top-stats {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  margin-bottom: 12px;
+}
+
+.fut-top-stats .fut-left {
+  width: auto;
+  padding: 0;
+  margin: 0;
+  transform: none;
+  flex-shrink: 0;
+}
+
+.fut-top-stats .fut-rating {
+  font-size: 34px;
+  line-height: 1;
+}
+
+.fut-top-stats .fut-pos {
+  font-size: 12px;
+}
+
+.fut-top-stats .fut-sep,
+.fut-top-stats .fut-ball {
+  display: none;
+}
+
+.fut-top-stats .fut-gs-form {
+  width: auto;
+  margin: 0;
+  gap: 8px;
+  flex: 1;
+  justify-content: space-between;
+}
+
+.fut-top-stats .fut-gs-btn {
+  padding: 3px 5px;
+}
+
+.fut-top-stats .fut-gs-btn b {
+  font-size: 15px;
+}
+
+.fut-top-stats .fut-form-summary {
+  margin-left: 0;
+}
+
+.fut-top-stats .fut-form > span:first-child {
+  font-size: 12px;
+}
+
+.fut-top-stats .fut-chip {
+  width: 18px;
+  height: 18px;
+  font-size: 10px;
+}
+
+/* FIFA/PES two-column player card */
+.fut-main {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.fut-portrait {
+  width: 55%;
+  flex: 0 0 55%;
+  margin: 0;
+}
+
+.fut-top-stats {
+  width: auto;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 12px;
+  margin: 0;
+}
+
+.fut-top-stats .fut-left {
+  width: auto;
+  transform: none;
+  padding: 0;
+  margin: 0;
+  align-items: flex-start;
+  text-align: left;
+}
+
+.fut-top-stats .fut-rating {
+  font-size: 38px;
+}
+
+.fut-top-stats .fut-pos {
+  font-size: 13px;
+}
+
+.fut-top-stats .fut-gs-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 0;
+}
+
+.fut-top-stats .fut-form-summary {
+  margin: 0;
+  align-items: flex-start;
+}
+
+.fut-top-stats .fut-form {
+  flex-wrap: wrap;
+}
+
+/* Refine right-side player statistics */
+.fut-top-stats {
+  gap: 6px;
+}
+
+.fut-top-stats .fut-rating {
+  font-size: 46px;
+}
+
+.fut-top-stats .fut-pos {
+  font-size: 16px;
+}
+
+.fut-top-stats .fut-gs-form {
+  gap: 6px;
+}
+
+.fut-top-stats .fut-gs-btn {
+  font-size: 16px;
+  padding: 2px 4px;
+}
+
+.fut-top-stats .fut-gs-btn b {
+  font-size: 22px;
+}
+
+.fut-top-stats .fut-form > span:first-child {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.fut-top-stats .fut-chip {
+  width: 22px;
+  height: 22px;
+  font-size: 13px;
+}
+
+.fut-top-stats .fut-sub {
+  font-size: 12px;
+}
+
+/* Make OVR rating more prominent */
+.fut-top-stats .fut-rating {
+  font-size: 60px;
+  line-height: 0.95;
+}
+
+/* Make OVR rating more prominent */
+.fut-top-stats .fut-rating {
+  font-size: 80px;
+  line-height: 0.95;
+}
+
+/* Centre OVR within the right stats column */
+.fut-top-stats {
+  justify-content: center;
+}
+
+.fut-top-stats .fut-left {
+  align-self: stretch;
+  justify-content: center;
+}
+
+/* Centre OVR label directly below rating */
+.fut-top-stats .fut-ovr-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  width: fit-content;
+  gap: 2px;
+}
+
+.fut-top-stats .fut-rating,
+.fut-top-stats .fut-pos {
+  display: block;
+  width: 100%;
+  text-align: center;
+}
+
+.fut-top-stats .fut-left {
+  align-items: center;
+  text-align: center;
+}
+
+/* Centre G/A and FORM like OVR */
+.fut-top-stats .fut-gs-form {
+  align-items: center;
+  width: 100%;
+}
+
+.fut-top-stats .fut-gs {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.fut-top-stats .fut-form-summary {
+  width: 100%;
+  align-items: center;
+  text-align: center;
+}
+
+.fut-top-stats .fut-form {
+  justify-content: center;
+  width: 100%;
+}
+
+.fut-top-stats .fut-sub {
+  text-align: center;
+}
+
+/* Keep all five FORM results on one line */
+.fut-top-stats .fut-form-summary {
+  min-width: 0;
+  width: 100%;
+}
+
+.fut-top-stats .fut-form {
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: center;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;
+}
+
+.fut-top-stats .fut-form > span:first-child {
+  font-size: 12px;
+  margin-right: 1px;
+}
+
+.fut-top-stats .fut-chip {
+  width: 17px;
+  height: 17px;
+  min-width: 17px;
+  font-size: 10px;
+  flex-shrink: 0;
+}
+
+.fut-top-stats .fut-sub {
+  font-size: 10px;
+}
