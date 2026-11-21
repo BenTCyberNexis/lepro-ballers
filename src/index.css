@@ -920,3 +920,103 @@ body:has(.login-page) #root { min-height: 100vh; }
     margin-bottom: 12px;
   }
 }
+
+/* Unified desktop and mobile login design */
+.login-page {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 40px 20px;
+  background:
+    linear-gradient(rgba(3, 20, 14, .28), rgba(3, 20, 14, .48)),
+    url('./assets/lepro-login-photo.jpg') center / cover no-repeat !important;
+}
+
+.login-visual {
+  display: none !important;
+}
+
+.login-panel {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 30px 20px;
+  background: transparent !important;
+}
+
+.login-form-wrap {
+  width: 100%;
+  max-width: 480px;
+  padding: 38px 32px;
+  border: 1px solid rgba(255, 255, 255, .2);
+  border-radius: 24px;
+  background: rgba(4, 25, 18, .90) !important;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, .48);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.login-heading h2,
+.login-form label {
+  color: #fff !important;
+}
+
+.login-heading p,
+.login-signup {
+  color: rgba(255, 255, 255, .82) !important;
+}
+
+.login-heading .login-kicker {
+  color: #ffd65a !important;
+  font-size: 15px;
+  font-weight: 900;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, .8);
+}
+
+.login-input-wrap {
+  background: rgba(255, 255, 255, .13) !important;
+  border: 1px solid rgba(255, 255, 255, .3) !important;
+}
+
+.login-input-wrap input {
+  color: #fff !important;
+}
+
+.login-input-wrap input::placeholder {
+  color: rgba(255, 255, 255, .68) !important;
+}
+
+.login-input-icon,
+.login-show-password {
+  color: rgba(255, 255, 255, .85) !important;
+}
+
+.login-password-label a,
+.login-signup a {
+  color: #ffd65a !important;
+}
+
+.login-footnote {
+  color: rgba(255, 255, 255, .72) !important;
+  border-color: rgba(255, 255, 255, .2) !important;
+}
+
+@media (max-width: 850px) {
+  .login-page {
+    padding: 24px 16px;
+  }
+
+  .login-panel {
+    min-height: auto;
+    padding: 0;
+  }
+
+  .login-form-wrap {
+    max-width: 460px;
+    padding: 30px 24px;
+    background: rgba(4, 25, 18, .90) !important;
+  }
+}
