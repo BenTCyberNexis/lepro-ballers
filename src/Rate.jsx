@@ -92,13 +92,6 @@ export default function Rate({ userId }) {
 
   async function openMatch(m) {
     setError('')
-    const { data: s } = await supabase
-      .from('settings')
-      .select('value')
-      .eq('key', 'rating_scope')
-      .single()
-    const scope = s?.value ?? 'everyone'
-
     const { data: mp } = await supabase
       .from('match_players')
       .select('player_id, team, players(name)')
@@ -107,13 +100,7 @@ export default function Rate({ userId }) {
     const doneIds = new Set((done || []).map((d) => d.rated_id))
 
     const list = (mp || [])
-      .filter((p) => p.player_id !== userId)
-      .filter(
-        (p) =>
-          scope === 'everyone' ||
-          (scope === 'teammates' && p.team === m.team) ||
-          (scope === 'opponents' && p.team !== m.team)
-      )
+      .filter((p) => p.player_id !== userId && p.team === m.team)
       .map((p) => ({
         id: p.player_id,
         name: p.players?.name ?? 'Player',

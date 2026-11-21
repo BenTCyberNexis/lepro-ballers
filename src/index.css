@@ -647,3 +647,65 @@ body:has(.login-page) #root { min-height: 100vh; }
     grid-template-columns: 1fr;
   }
 }
+
+/* Responsive typography and touch targets for phones */
+@media (max-width: 600px) {
+  body {
+    font-size: 17px;
+  }
+
+  h1 {
+    font-size: 34px;
+  }
+
+  h2 {
+    font-size: 24px;
+  }
+
+  label,
+  .legend,
+  .pill,
+  button.small,
+  .player-menu button,
+  .account-menu button,
+  .who,
+  .mini-stats,
+  .trend-num {
+    font-size: 16px;
+  }
+
+  input:not([type=checkbox]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
+  button {
+    min-height: 44px;
+  }
+
+  .tab {
+    font-size: 14px;
+    padding: 10px 4px 12px;
+  }
+
+  .tab .ico {
+    font-size: 22px;
+  }
+
+  .small-text {
+    font-size: 14px;
+  }
+
+  .fut-lab {
+    font-size: 13px;
+  }
+
+  .brand {
+    font-size: 22px;
+  }
+
+  .match-admin-summary {
+    font-size: 16px;
+  }
+}
