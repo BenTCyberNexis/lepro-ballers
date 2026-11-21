@@ -1,17 +1,18 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, lazy, Suspense } from 'react'
 import { supabase } from './supabaseClient'
-import Login from './Login'
-import Signup from './Signup'
-import ForgotPassword from './ForgotPassword'
-import ChangePassword from './ChangePassword'
-import ChangePhoto from './ChangePhoto'
 import Avatar from './Avatar'
-import LastMatch from './LastMatch'
-import Rate from './Rate'
-import Scores from './Scores'
-import Season from './Season'
-import TopScorers from './TopScorers'
-import Admin from './Admin'
+
+const Login = lazy(() => import('./Login'))
+const Signup = lazy(() => import('./Signup'))
+const ForgotPassword = lazy(() => import('./ForgotPassword'))
+const ChangePassword = lazy(() => import('./ChangePassword'))
+const ChangePhoto = lazy(() => import('./ChangePhoto'))
+const LastMatch = lazy(() => import('./LastMatch'))
+const Rate = lazy(() => import('./Rate'))
+const Scores = lazy(() => import('./Scores'))
+const Season = lazy(() => import('./Season'))
+const TopScorers = lazy(() => import('./TopScorers'))
+const Admin = lazy(() => import('./Admin'))
 
 const TABS = [
   ['home', 'Home', '🏠'],
@@ -150,7 +151,8 @@ export default function App() {
   const active = tabs.some((t) => t[0] === tab) ? tab : 'home'
 
   return (
-    <div className="app">
+    <Suspense fallback={<div className="card">Loading...</div>}>
+      <div className="app">
       <header className="topbar">
         <span className="brand">⚽ Lepro Ballers</span>
         <div className="account-wrap" ref={accountRef}>
@@ -215,6 +217,7 @@ export default function App() {
           </button>
         ))}
       </nav>
-    </div>
+      </div>
+    </Suspense>
   )
 }

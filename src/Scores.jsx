@@ -153,6 +153,7 @@ export default function Scores({ userId, show }) {
   const lastFive = history
     .filter((r) => r.result?.hasResult && r.myTeam)
     .slice(0, 5)
+    .reverse()
     .map((r) => {
       const draw = r.result.teamA === r.result.teamB
       const won =
@@ -270,6 +271,7 @@ export default function Scores({ userId, show }) {
                 )}
               </div>
               <div className="fut-nameplate">{mine.name}</div>
+              <div className="fut-gs-form">
               <div className="fut-gs" onMouseLeave={() => setHoverExtra(null)}>
                 <button
                   type="button"
@@ -290,6 +292,34 @@ export default function Scores({ userId, show }) {
                   🦵 <b>{assistsYear}</b>
                 </button>
                 
+              </div>
+              <div className="fut-form-summary">
+              {lastFive.length > 0 && (
+                <div className="fut-form">
+                  <span>FORM</span>
+                  {lastFive.map((r) => (
+                    <button
+                      type="button"
+                      key={r.match_id}
+                      className={'fut-chip ' + r.form + (extraKey === 'form:' + r.match_id ? ' active' : '')}
+                      title={(formatMatchDate(r.match?.match_date) || 'Match') + ': ' + r.form}
+                      onMouseEnter={() => canHover && setHoverExtra('form:' + r.match_id)}
+                      onMouseLeave={() => setHoverExtra(null)}
+                      onClick={() =>
+                        setPinnedExtra(
+                          pinnedExtra === 'form:' + r.match_id ? null : 'form:' + r.match_id
+                        )
+                      }
+                    >
+                      {r.form}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="fut-sub">
+                Based on {mine.matches_rated} match{mine.matches_rated > 1 ? 'es' : ''}
+              </div>
+              </div>
               </div>
               <div className="fut-panel" onMouseLeave={() => setHoverStat(null)}>
                 <div className="fut-stats">
@@ -345,28 +375,6 @@ export default function Scores({ userId, show }) {
                     )
                   })()}
               </div>
-              {lastFive.length > 0 && (
-                <div className="fut-form">
-                  <span>FORM</span>
-                  {lastFive.map((r) => (
-                    <button
-                      type="button"
-                      key={r.match_id}
-                      className={'fut-chip ' + r.form + (extraKey === 'form:' + r.match_id ? ' active' : '')}
-                      title={(formatMatchDate(r.match?.match_date) || 'Match') + ': ' + r.form}
-                      onMouseEnter={() => canHover && setHoverExtra('form:' + r.match_id)}
-                      onMouseLeave={() => setHoverExtra(null)}
-                      onClick={() =>
-                        setPinnedExtra(
-                          pinnedExtra === 'form:' + r.match_id ? null : 'form:' + r.match_id
-                        )
-                      }
-                    >
-                      {r.form}
-                    </button>
-                  ))}
-                </div>
-              )}
               {extraKey &&
                 (() => {
                   if (extraKey === 'ovr') {
@@ -451,9 +459,6 @@ export default function Scores({ userId, show }) {
                     </div>
                   )
                 })()}
-              <div className="fut-sub">
-                Based on {mine.matches_rated} match{mine.matches_rated > 1 ? 'es' : ''}
-              </div>
             </div>
           </div>
         )}

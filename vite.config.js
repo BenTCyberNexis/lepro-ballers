@@ -1,8 +1,27 @@
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 
-// https://vite.dev/config/
 export default defineConfig({
   base: '/lepro-ballers/',
   plugins: [react()],
+  build: {
+    rolldownOptions: {
+      output: {
+        codeSplitting: {
+          groups: [
+            {
+              name: 'react-vendor',
+              test: /node_modules\/(react|react-dom)\//,
+              priority: 20,
+            },
+            {
+              name: 'supabase-vendor',
+              test: /node_modules\/@supabase\//,
+              priority: 10,
+            },
+          ],
+        },
+      },
+    },
+  },
 })

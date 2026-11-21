@@ -1282,3 +1282,152 @@ body:has(.login-page) #root { min-height: 100vh; }
 .fut-gs-btn { border-radius: 0; padding: 6px 18px; }
 .fut-gs-btn:first-child { border-radius: 999px 0 0 999px; border-right-width: 0; }
 .fut-gs-btn:last-child { border-radius: 0 999px 999px 0; }
+
+/* G/A and player form on the same row */
+.fut-gs-form {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.fut-gs-form .fut-gs,
+.fut-gs-form .fut-form {
+  margin-top: 0;
+}
+
+.fut-gs-form .fut-form {
+  gap: 6px;
+}
+
+.fut-gs-form .fut-form > span:first-child {
+  font-size: 14px;
+  margin-right: 2px;
+}
+
+/* Align G/A with FORM and match count */
+.fut-gs-form {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: nowrap;
+  gap: 12px;
+}
+
+.fut-gs-form .fut-form-summary {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.fut-gs-form .fut-gs,
+.fut-gs-form .fut-form {
+  margin-top: 0;
+}
+
+.fut-gs-form .fut-form {
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.fut-gs-form .fut-form > span:first-child {
+  font-size: 20px;
+  margin-right: 6px;
+}
+
+.fut-gs-form .fut-sub {
+  margin: 0;
+  text-align: left;
+  font-size: 12px;
+}
+
+
+/* Compact G/A + last-five form layout */
+.fut-gs-form {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  flex-wrap: nowrap;
+  margin-top: 10px;
+}
+
+.fut-gs-form .fut-gs {
+  flex: 0 1 auto;
+  min-width: 0;
+  gap: 0;
+  margin: 0;
+}
+
+.fut-gs-form .fut-gs-btn {
+  padding: 5px 8px;
+  gap: 3px;
+  font-size: 12px;
+}
+
+.fut-gs-form .fut-gs-btn b {
+  font-size: 19px;
+}
+
+.fut-gs-form .fut-form-summary {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  min-width: 0;
+  flex-shrink: 0;
+}
+
+.fut-gs-form .fut-form {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.fut-gs-form .fut-form > span:first-child {
+  font-size: 20px;
+  margin-right: 2px;
+}
+
+.fut-gs-form .fut-chip {
+  width: 23px;
+  height: 23px;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.fut-gs-form .fut-sub {
+  margin: 0;
+  font-size: 11px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+/* Keep G/A in place; position FORM independently */
+.fut-gs-form {
+  justify-content: flex-start;
+  gap: 4px;
+}
+
+.fut-gs-form .fut-gs,
+.fut-gs-form .fut-form-summary {
+  flex-shrink: 0;
+}
+
+.fut-gs-form .fut-form-summary {
+  align-items: flex-start;
+  margin-left: auto;
+}
+
+.fut-gs-form .fut-form {
+  gap: 3px;
+}
