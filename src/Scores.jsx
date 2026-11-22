@@ -343,7 +343,7 @@ export default function Scores({ userId, show }) {
                 </div>
               )}
               <div className="fut-sub">
-                Based on {mine.matches_rated} match{mine.matches_rated > 1 ? 'es' : ''}
+                Total matches played: {appearances}
               </div>
               </div>
               </div>
